@@ -4,7 +4,7 @@ import * as fs from 'node:fs';
 import { read } from 'to-vfile';
 import { toMarkdown } from './markdown.ts';
 import * as z from 'zod';
-import { inspect } from 'node:util';
+import type { FormattedExecutionResult } from 'graphql';
 
 try {
   // Retrieve input params
@@ -12,7 +12,7 @@ try {
   const graphqlEndpoint = new URL(core.getInput('graphql-endpoint', { required: true }));
   const graphqlAuthorization = core.getInput('graphql-authorization', { required: true });
 
-  const defaultPublish = core.getBooleanInput('publish');
+  const defaultPublish = core.getInput('publish') !== 'false';
   const defaultLanguage = core.getInput('language');
 
   const files = fs.globSync(glob);
@@ -21,57 +21,68 @@ try {
 
   for (const file of files) {
     try {
-      await core.group(`Processing file: "${file}"`, async () => {
-        const input = await read(file, { encoding: 'utf8' });
-        input.data.raw = `https://raw.githubusercontent.com/${github.context.repo.owner}/${github.context.repo.repo}/${github.context.sha}/${file}`;
-        const output = await toMarkdown(input);
-        const html = String(output);
+      const input = await read(file, { encoding: 'utf8' });
+      input.data.raw = `https://raw.githubusercontent.com/${github.context.repo.owner}/${github.context.repo.repo}/${github.context.sha}/${file}`;
+      const output = await toMarkdown(input);
+      const html = String(output);
 
-        const matter = z
-          .object({
-            path: z.string(),
-            language: z.string().optional().default(defaultLanguage),
-          })
-          .parse(output.data.matter);
+      const matter = z
+        .object({
+          path: z.string(),
+          language: z.string().optional().default(defaultLanguage),
+          publish: z.boolean().optional().default(defaultPublish),
+        })
+        .parse(output.data.matter);
 
-        const response = await fetch(graphqlEndpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Referer: graphqlEndpoint.origin,
-            Authorization: graphqlAuthorization,
-          },
-          body: JSON.stringify({
-            query: /* GraphQL */ `
-              mutation ($path: String!, $value: String!, $publish: Boolean!, $language: String!) {
-                edit: jcr(workspace: EDIT) {
-                  mutateNode(pathOrId: $path) {
-                    mutateProperty(name: "textContent") {
-                      setValue(value: $value, language: $language)
-                    }
-                  }
-                }
-                publish: jcr(workspace: EDIT) @include(if: $publish) {
-                  mutateNode(pathOrId: $path) {
-                    publish(languages: [$language])
+      const response = await fetch(graphqlEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Referer: graphqlEndpoint.origin,
+          Authorization: graphqlAuthorization,
+        },
+        body: JSON.stringify({
+          query: /* GraphQL */ `
+            mutation ($path: String!, $value: String!, $publish: Boolean!, $language: String!) {
+              edit: jcr(workspace: EDIT) {
+                mutateNode(pathOrId: $path) {
+                  mutateProperty(name: "textContent") {
+                    setValue(value: $value, language: $language)
                   }
                 }
               }
-            `,
-            variables: {
-              path: matter.path,
-              value: html,
-              publish: false,
-              language: matter.language,
-            },
-          }),
-        });
-
-        core.info(inspect(await response.json(), { depth: Infinity, colors: true }));
+              publish: jcr(workspace: EDIT) @include(if: $publish) {
+                mutateNode(pathOrId: $path) {
+                  publish(languages: [$language])
+                }
+              }
+            }
+          `,
+          variables: {
+            path: matter.path,
+            value: html,
+            publish: matter.publish,
+            language: matter.language,
+          },
+        }),
       });
+
+      const { data, errors } = response.json() as FormattedExecutionResult<{
+        edit: { mutateNode: { mutateProperty: { setValue: boolean } } };
+        publish?: { mutateNode: { publish: boolean } };
+      }>;
+
+      if (errors) throw errors;
+
+      if (!data?.edit.mutateNode.mutateProperty.setValue) throw new Error(`Failed to update node.`);
+      if (matter.publish && !data?.publish?.mutateNode.publish)
+        throw new Error(`Failed to publish node.`);
+
+      core.info(`✅ Successfully processed "${file}".`);
     } catch (error) {
+      core.startGroup(`❌ Failed to process "${file}".`);
       console.error(error);
-      core.warning(`Failed to process file: "${file}".`);
+      core.endGroup();
     }
   }
 

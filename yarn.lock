@@ -547,6 +547,7 @@ __metadata:
     "@actions/github": "npm:^6.0.1"
     "@types/hast": "npm:^3.0.4"
     "@types/node": "npm:^24.3.0"
+    graphql: "npm:^16.11.0"
     rehype-stringify: "npm:^10.0.1"
     remark-frontmatter: "npm:^5.0.0"
     remark-parse: "npm:^11.0.0"
@@ -559,6 +560,13 @@ __metadata:
     zod: "npm:^4.0.17"
   languageName: unknown
   linkType: soft
+
+"graphql@npm:^16.11.0":
+  version: 16.11.0
+  resolution: "graphql@npm:16.11.0"
+  checksum: 10c0/124da7860a2292e9acf2fed0c71fc0f6a9b9ca865d390d112bdd563c1f474357141501c12891f4164fe984315764736ad67f705219c62f7580681d431a85db88
+  languageName: node
+  linkType: hard
 
 "hast-util-to-html@npm:^9.0.0":
   version: 9.0.5
