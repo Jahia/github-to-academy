@@ -1,0 +1,12 @@
+{
+  "name": "github-to-academy",
+  "private": true,
+  "type": "module",
+  "packageManager": "yarn@4.9.2",
+  "scripts": {
+    "build": "rolldown src/index.ts -o dist/index.js"
+  },
+  "devDependencies": {
+    "rolldown": "1.0.0-beta.33"
+  }
+}

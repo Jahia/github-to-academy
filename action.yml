@@ -1,0 +1,37 @@
+name: GitHub to Academy
+description: Push markdown to Jahia Academy
+
+# Just for fun, make the action pretty
+author: Jahia
+branding:
+  color: blue
+  icon: book
+
+runs:
+  using: node24
+  main: dist/index.js
+
+inputs:
+  # Mandatory parameters, not available for overriding in markdown frontmatter
+  files:
+    description: 'Glob pattern to find markdown files. Recommended: "docs/**/*.md".'
+    required: true
+
+  graphql-endpoint:
+    description: 'GraphQL endpoint URL of the Jahia instance to push to.'
+    required: true
+
+  graphql-authorization:
+    description: 'Authorization header for the GraphQL endpoint. Any user account can be used with "Basic base64(email:password)".'
+    required: true
+
+  # Optional parameters, can be individually overridden in markdown frontmatter
+  publish:
+    description: 'Whether to publish the content immediately. Defaults to "true".'
+    required: false
+    default: 'true'
+
+  language:
+    description: 'Language of the content being pushed. Defaults to "en".'
+    required: false
+    default: 'en'
