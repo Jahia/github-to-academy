@@ -21,7 +21,7 @@ try {
 
   for (const file of files) {
     try {
-      core.group(`Processing file: "${file}"`, async () => {
+      await core.group(`Processing file: "${file}"`, async () => {
         const input = await read(file, { encoding: 'utf8' });
         input.data.raw = `https://raw.githubusercontent.com/${github.context.repo.owner}/${github.context.repo.repo}/${github.context.sha}/${file}`;
         const output = await toMarkdown(input);
