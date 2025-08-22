@@ -6,6 +6,7 @@ import { toMarkdown } from './markdown.ts';
 import * as z from 'zod';
 import { Client, fetchExchange } from '@urql/core';
 import { graphql } from 'gql.tada';
+import { inspect } from 'node:util';
 
 const defaultPublish = core.getInput('publish') !== 'false';
 const defaultLanguage = core.getInput('language') || 'en';
@@ -75,7 +76,7 @@ try {
 
       const matter = FrontmatterSchema.parse(output.data.matter);
 
-      const { data, error } = await client.query(
+      const { data, error } = await client.mutation(
         graphql(`
           mutation (
             $path: String!
@@ -117,7 +118,7 @@ try {
       core.info(`✅ Successfully processed "${file}".`);
     } catch (error) {
       core.startGroup(`❌ Failed to process "${file}".`);
-      console.error(error);
+      core.error(inspect(error));
       core.endGroup();
     }
   }
