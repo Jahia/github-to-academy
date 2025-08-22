@@ -77,10 +77,16 @@ try {
 
       const { data, error } = await client.query(
         graphql(`
-          mutation ($path: String!, $value: String!, $publish: Boolean!, $language: String!) {
+          mutation (
+            $path: String!
+            $value: String!
+            $publish: Boolean!
+            $language: String!
+            $html: String!
+          ) {
             edit: jcr(workspace: EDIT) {
               mutateNode(pathOrId: $path) {
-                mutateProperty(name: "textContent") {
+                mutateProperty(name: $html) {
                   setValue(value: $value, language: $language)
                 }
               }
@@ -94,6 +100,7 @@ try {
         `),
         {
           path: matter.content.$path as string,
+          html: matter.content.$html,
           value: html,
           publish: matter.publish,
           language: matter.language,
