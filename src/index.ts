@@ -145,7 +145,25 @@ try {
             }
           );
           if (error) throw error;
+
           // If the mutation was successful, consider the page created
+          // Render the page in edit mode to trigger area creation
+          await client.query(
+            graphql(
+              `
+                query ($path: String!, $language: String!) {
+                  jcr {
+                    nodeByPath(path: $path) {
+                      renderedContent(isEditMode: true, language: $language) {
+                        output
+                      }
+                    }
+                  }
+                }
+              `
+            ),
+            { path: $path, language }
+          );
         } else if (error) {
           // Re-throw all other errors
           throw error;
