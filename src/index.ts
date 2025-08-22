@@ -197,7 +197,7 @@ try {
               query ($path: String!, $language: String!) {
                 jcr {
                   nodeByPath(path: $path) {
-                    renderedContent(isEditMode: true, language: $language) {
+                    renderedContent(isEditMode: true, language: $language, view: "default") {
                       output
                     }
                   }
