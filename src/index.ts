@@ -197,7 +197,12 @@ try {
               query ($path: String!, $language: String!) {
                 jcr {
                   nodeByPath(path: $path) {
-                    renderedContent(isEditMode: true, language: $language, view: "default") {
+                    renderedContent(
+                      isEditMode: true
+                      language: $language
+                      view: "default"
+                      templateType: "html"
+                    ) {
                       output
                     }
                   }
