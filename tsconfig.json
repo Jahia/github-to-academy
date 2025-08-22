@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "strict": true,
+    "target": "esnext",
+    "plugins": [
+      {
+        "name": "gql.tada/ts-plugin",
+        "schema": {
+          "url": "https://academy.jahia.com/modules/graphql",
+          "headers": {
+            "Referer": "https://academy.jahia.com/",
+            "Authorization": "Basic ..."
+          }
+        },
+        "tadaOutputLocation": "./generated/graphql-env.d.ts"
+      }
+    ]
+  }
+}

@@ -6,4 +6,5 @@
 !.yarn/versions
 
 dist
+generated
 node_modules
