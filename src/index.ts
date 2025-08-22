@@ -198,6 +198,7 @@ try {
                 jcr {
                   nodeByPath(path: $path) {
                     renderedContent(
+                      contextConfiguration: "gwt"
                       isEditMode: true
                       language: $language
                       view: "default"
