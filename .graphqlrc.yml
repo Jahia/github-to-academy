@@ -1,0 +1,5 @@
+schema:
+  - https://academy.jahia.com/modules/graphql:
+      headers:
+        Referer: https://academy.jahia.com/
+        Authorization: Basic ... # base64(email : password)
