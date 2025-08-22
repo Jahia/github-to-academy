@@ -196,12 +196,12 @@ try {
           : frontmatter.content.$path;
 
       const { $path, $subpath, $type, $html, ...rawProperties } = content;
-      const properties = Object.entries(rawProperties).map<
-        ReturnType<typeof graphql.scalar<'InputJCRProperty'>>
-      >(([name, value]) => {
-        if (typeof value !== 'string') throw new Error(`Property "${name}" must be a string.`);
-        return { name, value, language, type: 'STRING' };
-      });
+      const properties = Object.entries(rawProperties)
+        .map<ReturnType<typeof graphql.scalar<'InputJCRProperty'>>>(([name, value]) => {
+          if (typeof value !== 'string') throw new Error(`Property "${name}" must be a string.`);
+          return { name, value, language, type: 'STRING' };
+        })
+        .concat({ name: $html, value: html, language, type: 'STRING' });
 
       // Now the parent node, if any, exists, it's time to create/update the content node
       // Does the content node exist?
