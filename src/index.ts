@@ -111,8 +111,11 @@ try {
               mutation (
                 $parent: String!
                 $name: String!
+                $path: String!
                 $type: String!
                 $properties: [InputJCRProperty!]!
+                $publish: Boolean!
+                $language: String!
               ) {
                 jcr {
                   addNode(
@@ -124,9 +127,22 @@ try {
                     __typename
                   }
                 }
+                publish: jcr @include(if: $publish) {
+                  mutateNode(pathOrId: $path) {
+                    publish(languages: [$language])
+                  }
+                }
               }
             `),
-            { parent: dirname($path), name: basename($path), type: $type, properties }
+            {
+              parent: dirname($path),
+              name: basename($path),
+              path: $path,
+              type: $type,
+              properties,
+              publish,
+              language,
+            }
           );
           if (error) throw error;
           // If the mutation was successful, consider the page created
@@ -147,7 +163,12 @@ try {
           // At this point, the page exists, update it
           const { error } = await client.mutation(
             graphql(`
-              mutation ($path: String!, $properties: [InputJCRProperty!]!) {
+              mutation (
+                $path: String!
+                $properties: [InputJCRProperty!]!
+                $publish: Boolean!
+                $language: String!
+              ) {
                 jcr {
                   mutateNode(pathOrId: $path) {
                     setPropertiesBatch(properties: $properties) {
@@ -155,9 +176,14 @@ try {
                     }
                   }
                 }
+                publish: jcr @include(if: $publish) {
+                  mutateNode(pathOrId: $path) {
+                    publish(languages: [$language])
+                  }
+                }
               }
             `),
-            { path: $path, properties }
+            { path: $path, properties, publish, language }
           );
 
           if (error) throw error;
@@ -179,7 +205,7 @@ try {
 
       // Now the parent node, if any, exists, it's time to create/update the content node
       // Does the content node exist?
-      const { data, error } = await client.query(
+      const { error } = await client.query(
         graphql(`
           query ($path: String!) {
             jcr {
@@ -201,8 +227,11 @@ try {
             mutation (
               $parent: String!
               $name: String!
+              $path: String!
               $type: String!
               $properties: [InputJCRProperty!]!
+              $publish: Boolean!
+              $language: String!
             ) {
               jcr {
                 addNode(
@@ -214,10 +243,25 @@ try {
                   __typename
                 }
               }
+              publish: jcr @include(if: $publish) {
+                mutateNode(pathOrId: $path) {
+                  publish(languages: [$language])
+                }
+              }
             }
           `),
-          { parent: dirname(path), name: basename(path), type: content.$type, properties }
+          {
+            parent: dirname(path),
+            name: basename(path),
+            type: content.$type,
+            properties,
+            publish,
+            language,
+            path,
+          }
         );
+
+        if (error) throw error;
       } else if (error) {
         // Re-throw all other errors
         throw error;
@@ -225,7 +269,12 @@ try {
         // It exists, update it
         const { error } = await client.mutation(
           graphql(`
-            mutation ($path: String!, $properties: [InputJCRProperty!]!) {
+            mutation (
+              $path: String!
+              $properties: [InputJCRProperty!]!
+              $publish: Boolean!
+              $language: String!
+            ) {
               jcr {
                 mutateNode(pathOrId: $path) {
                   setPropertiesBatch(properties: $properties) {
@@ -233,15 +282,18 @@ try {
                   }
                 }
               }
+              publish: jcr @include(if: $publish) {
+                mutateNode(pathOrId: $path) {
+                  publish(languages: [$language])
+                }
+              }
             }
           `),
-          { path, properties }
+          { path, properties, publish, language }
         );
 
         if (error) throw error;
       }
-
-      if (error) throw error;
 
       core.info(`✅ Successfully processed "${file}".`);
     } catch (error) {
