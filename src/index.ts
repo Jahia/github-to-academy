@@ -4,7 +4,8 @@ import * as fs from 'node:fs';
 import { read } from 'to-vfile';
 import { toMarkdown } from './markdown.ts';
 import * as z from 'zod';
-import type { FormattedExecutionResult } from 'graphql';
+import { Client, fetchExchange } from '@urql/core';
+import { graphql } from 'gql.tada';
 
 const defaultPublish = core.getInput('publish') !== 'false';
 const defaultLanguage = core.getInput('language') || 'en';
@@ -47,6 +48,17 @@ try {
   const graphqlEndpoint = new URL(core.getInput('graphql-endpoint', { required: true }));
   const graphqlAuthorization = core.getInput('graphql-authorization', { required: true });
 
+  const client = new Client({
+    url: graphqlEndpoint.toString(),
+    exchanges: [fetchExchange],
+    fetchOptions: {
+      headers: {
+        Referer: graphqlEndpoint.origin,
+        Authorization: graphqlAuthorization,
+      },
+    },
+  });
+
   const files = fs.globSync(glob);
 
   core.info(`Found ${files.length} markdown files from glob: "${glob}".`);
@@ -63,48 +75,36 @@ try {
 
       const matter = FrontmatterSchema.parse(output.data.matter);
 
-      const response = await fetch(graphqlEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Referer: graphqlEndpoint.origin,
-          Authorization: graphqlAuthorization,
-        },
-        body: JSON.stringify({
-          query: /* GraphQL */ `
-            mutation ($path: String!, $value: String!, $publish: Boolean!, $language: String!) {
-              edit: jcr(workspace: EDIT) {
-                mutateNode(pathOrId: $path) {
-                  mutateProperty(name: "textContent") {
-                    setValue(value: $value, language: $language)
-                  }
-                }
-              }
-              publish: jcr(workspace: EDIT) @include(if: $publish) {
-                mutateNode(pathOrId: $path) {
-                  publish(languages: [$language])
+      const { data, error } = await client.query(
+        graphql(`
+          mutation ($path: String!, $value: String!, $publish: Boolean!, $language: String!) {
+            edit: jcr(workspace: EDIT) {
+              mutateNode(pathOrId: $path) {
+                mutateProperty(name: "textContent") {
+                  setValue(value: $value, language: $language)
                 }
               }
             }
-          `,
-          variables: {
-            path: matter.content.$path,
-            value: html,
-            publish: matter.publish,
-            language: matter.language,
-          },
-        }),
-      });
+            publish: jcr(workspace: EDIT) @include(if: $publish) {
+              mutateNode(pathOrId: $path) {
+                publish(languages: [$language])
+              }
+            }
+          }
+        `),
+        {
+          path: matter.content.$path as string,
+          value: html,
+          publish: matter.publish,
+          language: matter.language,
+        }
+      );
 
-      const { data, errors } = response.json() as FormattedExecutionResult<{
-        edit: { mutateNode: { mutateProperty: { setValue: boolean } } };
-        publish?: { mutateNode: { publish: boolean } };
-      }>;
+      if (error) throw error;
 
-      if (errors) throw errors;
-
-      if (!data?.edit.mutateNode.mutateProperty.setValue) throw new Error(`Failed to update node.`);
-      if (matter.publish && !data?.publish?.mutateNode.publish)
+      if (!data?.edit?.mutateNode?.mutateProperty?.setValue)
+        throw new Error(`Failed to update node.`);
+      if (matter.publish && !data?.publish?.mutateNode?.publish)
         throw new Error(`Failed to publish node.`);
 
       core.info(`✅ Successfully processed "${file}".`);
