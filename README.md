@@ -30,8 +30,8 @@ content:
   # Type of the node, defaults to "jnt:bigText"
   $type: jnt:bigText
   # The name of the prop that holds the HTML content,
-  # defaults to "text" if "$type" is unset, mandatory for custom node types
-  $html: text
+  # defaults to "text" if unset, mandatory for custom node types
+  $body: text
   # All non $-prefixed properties will be passed as-is to create/update the node
   # Note that mandatory properties must be set
   'jcr:title': My Title
@@ -66,7 +66,7 @@ content:
   $subpath: page-area/content
   # The rest of the section stays the same
   $type: jnt:bigText
-  $html: text
+  $body: text
   ...other props...: will be passed as-is to create/update the content node
 ---
 

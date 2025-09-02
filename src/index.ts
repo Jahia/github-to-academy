@@ -20,7 +20,7 @@ const ContentSchema = z.object({
     // We could make the schema "smarter" at the expense of complexity
     // Let's keep it dumb for now
     $type: z.string().default('jnt:bigText'),
-    $html: z.string().default('text'),
+    $body: z.string().default('text'),
   }),
 });
 
@@ -33,7 +33,7 @@ const PageAndContentSchema = z.object({
   content: z.looseObject({
     $subpath: z.string(),
     $type: z.string().default('jnt:bigText'),
-    $html: z.string().default('text'),
+    $body: z.string().default('text'),
   }),
 });
 
@@ -224,13 +224,13 @@ try {
           ? resolve(frontmatter.page.$path, frontmatter.content.$subpath)
           : frontmatter.content.$path;
 
-      const { $path, $subpath, $type, $html, ...rawProperties } = content;
+      const { $path, $subpath, $type, $body, ...rawProperties } = content;
       const properties = Object.entries(rawProperties)
         .map<ReturnType<typeof graphql.scalar<'InputJCRProperty'>>>(([name, value]) => {
           if (typeof value !== 'string') throw new Error(`Property "${name}" must be a string.`);
           return { name, value, language, type: 'STRING' };
         })
-        .concat({ name: $html, value: html, language, type: 'STRING' });
+        .concat({ name: $body, value: html, language, type: 'STRING' });
 
       // Now the parent node, if any, exists, it's time to create/update the content node
       // Does the content node exist?
