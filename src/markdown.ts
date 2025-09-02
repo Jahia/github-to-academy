@@ -38,6 +38,13 @@ const processor = unified()
           node.children[0].value = node.children[0].value.trim();
         }
       }
+
+      // Fix link placeholders ({mode} and {lang})
+      if (node.tagName === 'a' && typeof node.properties.href === 'string') {
+        node.properties.href = node.properties.href
+          .replaceAll('%7Bmode%7D', '{mode}')
+          .replaceAll('%7Blang%7D', '{lang}');
+      }
     });
   })
   .use(rehypeStringify);
