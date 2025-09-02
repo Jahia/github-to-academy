@@ -76,7 +76,7 @@ page:
 # The content node stays *almost* the same
 content:
   # Where to create/update the content node, relative to the page (replaces $path)
-  $subpath: page-area/content
+  $subpath: document-area/content
   # The rest of the section stays the same
   $type: jnt:bigText
   $body: text
