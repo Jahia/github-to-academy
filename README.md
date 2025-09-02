@@ -10,11 +10,24 @@ We recommend using this action in two workflows:
 - On manual trigger
 
 ```yaml
-- uses: Jahia/github-to-academy@v1
-  with:
-    files: docs/**/*.md
-    graphql-endpoint: https://example.com/modules/graphql
-    graphql-authorization: Basic abcd... # Use a secret!
+# .github/workflows/push-docs.yml
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  push-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - uses: Jahia/github-to-academy@v1
+        with:
+          files: docs/**/*.md
+          graphql-endpoint: ${{ secrets.ACADEMY_ENDPOINT }}
+          graphql-authorization: ${{ secrets.ACADEMY_AUTHORIZATION }}
 ```
 
 ### Writing markdown files
