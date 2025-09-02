@@ -215,8 +215,6 @@ try {
         );
 
         if (response.error) throw response.error;
-
-        core.info(inspect(response.data, { depth: Infinity }));
       }
 
       const path =
@@ -331,10 +329,6 @@ try {
       core.endGroup();
     }
   }
-
-  // Get the JSON webhook payload for the event that triggered the workflow
-  const payload = JSON.stringify(github.context.payload, undefined, 2);
-  core.info(`The event payload: ${payload}`);
 } catch (error) {
   core.setFailed((error as Error).message);
 }
