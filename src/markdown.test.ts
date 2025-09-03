@@ -29,6 +29,19 @@ I'm hidden right?
 </details>
 
 <p>Test raw HTML processing <img src="/absolute.png" alt="" /></p>
+
+:::success
+I'm green
+:::
+:::danger
+I'm red
+:::
+:::warning
+I'm orange
+:::
+:::info
+I'm blue
+:::
 `,
   };
   const expected: Options = {
@@ -41,7 +54,11 @@ I'm hidden right?
 <details><summary>Raw HTML</summary>
 <p>I'm hidden right?</p>
 </details>
-<p>Test raw HTML processing <img src="http://example.com/absolute.png" alt=""></p>`,
+<p>Test raw HTML processing <img src="http://example.com/absolute.png" alt=""></p>
+<div class="alert alert-success"><p>I'm green</p></div>
+<div class="alert alert-danger"><p>I'm red</p></div>
+<div class="alert alert-warning"><p>I'm orange</p></div>
+<div class="alert alert-info"><p>I'm blue</p></div>`,
   };
 
   try {

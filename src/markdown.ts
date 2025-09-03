@@ -1,6 +1,8 @@
-import type { Root } from 'hast';
+import type * as hast from 'hast';
+import type * as mdast from 'mdast';
 import rehypeRaw from 'rehype-raw';
 import rehypeStringify from 'rehype-stringify';
+import remarkDirective from 'remark-directive';
 import remarkFrontmatter from 'remark-frontmatter';
 import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
@@ -17,14 +19,25 @@ declare module 'vfile' {
     matter: NonNullable<unknown>;
   }
 }
-
 const processor = unified()
   .use(remarkParse)
   .use(remarkFrontmatter)
+  .use(remarkDirective)
+  .use(() => (tree: mdast.Root) => {
+    visit(tree, (node) => {
+      if (node.type === 'containerDirective') {
+        if (!['success', 'danger', 'warning', 'info'].includes(node.name))
+          throw new Error(`Unknown container directive :::${node.name}`);
+        node.data ??= {};
+        node.data.hName = 'div';
+        node.data.hProperties = { className: ['alert', 'alert-' + node.name] };
+      }
+    });
+  })
   .use(() => (tree, file) => matter(file))
   .use(remarkRehype, { allowDangerousHtml: true })
   .use(rehypeRaw)
-  .use(() => (tree: Root, file) => {
+  .use(() => (tree: hast.Root, file) => {
     visit(tree, 'element', (node) => {
       // Resolve all relative image paths
       if (node.tagName === 'img') {

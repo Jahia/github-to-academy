@@ -11,6 +11,8 @@ We recommend using this action in two workflows:
 
 ```yaml
 # .github/workflows/push-docs.yml
+name: Push Docs to the Academy
+
 on:
   release:
     types: [published]
@@ -97,6 +99,42 @@ language: fr
 publish: false
 ---
 ```
+
+### Additional markdown transformations
+
+All standard markdown syntax is supported, [with some additional features added to better support the academy.](./src/markdown.ts)
+
+- Image tags with a relative path are rewritten to point to the GitHub raw URL, relative to the markdown file. This only works with public GitHub repos!
+
+  <!-- prettier-ignore -->
+  ```md
+  <!-- Before -->
+  ![alt text](relative.png)
+
+  <!-- After -->
+  <img src="https://raw.githubusercontent.com/username/repo/branch/docs/relative.png" alt="alt text" />
+  ```
+
+- [Bootstrap alerts](https://getbootstrap.com/docs/5.3/components/alerts/) have a custom markdown syntax:
+
+  <!-- prettier-ignore -->
+  ```md
+  <!-- Before -->
+  :::warning
+  Be careful!
+  :::
+
+  <!-- After -->
+  <div class="alert alert-warning">
+  <p>Be careful!</p>
+  </div>
+  ```
+
+  Supported types are: `success` (green), `danger` (red), `warning` (yellow) and `info` (blue).
+
+- Code blocks are trimmed and TypeScript language identifiers (`ts`, `tsx`) are replaced with `js` in the output to be compatible with the list of languages supported by the [hl.js](https://github.com/Jahia/jahia-academy-template/blob/master/src/main/resources/javascript/highlight.min.js) copy of the academy.
+
+- CMS links (links starting with `/cms/{mode}/{lang}`) are supported, and will use the correct vanity URL.
 
 ## Contributing
 
