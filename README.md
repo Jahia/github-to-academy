@@ -143,3 +143,15 @@ Contributions are welcome!
 This repository is a [JavaScript Action](https://docs.github.com/en/actions/tutorials/create-actions/create-a-javascript-action).
 
 The `main` branch is the development branch, it does not contain the build _artifact_ (a JS bundle), and therefore cannot be used directly as an action. All commits to the `main` branch will trigger a workflow to build the action and publish it to the `v1` branch.
+
+Because the project is meant to run on GitHub, it currently does not have a local development environment. However, for "reproducible" parts, there are unit tests that can be run with `yarn test`.
+
+```bash
+# Install dependencies
+yarn install
+
+# Run tests
+yarn test
+```
+
+If you want to try out changes before opening a PR, the best approach is to fork the repository and use `<you>/github-to-academy@v1` in your workflow.
