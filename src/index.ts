@@ -2,12 +2,12 @@ import * as core from '@actions/core';
 import * as github from '@actions/github';
 import { Client, fetchExchange } from '@urql/core';
 import { graphql } from 'gql.tada';
-import assert from 'node:assert';
 import * as fs from 'node:fs';
-import { basename, dirname, resolve } from 'node:path/posix';
+import { resolve } from 'node:path/posix';
 import { inspect } from 'node:util';
 import { read } from 'to-vfile';
 import * as z from 'zod';
+import { upsertNode } from './api.ts';
 import { toMarkdown } from './markdown.ts';
 
 const defaultPublish = core.getInput('publish') !== 'false';
@@ -81,114 +81,9 @@ try {
 
       // If `page` is defined, we need to create/update the page first
       if ('page' in frontmatter) {
-        const { $path, $type, ...rawProperties } = frontmatter.page;
-        const properties = Object.entries(rawProperties).map<
-          ReturnType<typeof graphql.scalar<'InputJCRProperty'>>
-        >(([name, value]) => {
-          if (typeof value !== 'string') throw new Error(`Property "${name}" must be a string.`);
-          return { name, value, language, type: 'STRING' };
-        });
+        const { $path, $type, ...properties } = frontmatter.page;
 
-        const { data, error } = await client.query(
-          graphql(`
-            query ($path: String!) {
-              jcr {
-                nodeByPath(path: $path) {
-                  primaryNodeType {
-                    name
-                  }
-                }
-              }
-            }
-          `),
-          { path: $path }
-        );
-
-        if (error?.graphQLErrors.some(({ message }) => message.includes('PathNotFoundException'))) {
-          // If the page was not found, we create it
-          const { error } = await client.mutation(
-            graphql(`
-              mutation (
-                $parent: String!
-                $name: String!
-                $path: String!
-                $type: String!
-                $properties: [InputJCRProperty!]!
-                $publish: Boolean!
-                $language: String!
-              ) {
-                jcr {
-                  addNode(
-                    parentPathOrId: $parent
-                    name: $name
-                    primaryNodeType: $type
-                    properties: $properties
-                  ) {
-                    __typename
-                  }
-                }
-                publish: jcr @include(if: $publish) {
-                  mutateNode(pathOrId: $path) {
-                    publish(languages: [$language])
-                  }
-                }
-              }
-            `),
-            {
-              parent: dirname($path),
-              name: basename($path),
-              path: $path,
-              type: $type,
-              properties,
-              publish,
-              language,
-            }
-          );
-          if (error) throw error;
-
-          // If the mutation was successful, consider the page created
-        } else if (error) {
-          // Re-throw all other errors
-          throw error;
-        } else {
-          assert(
-            data?.jcr.nodeByPath?.primaryNodeType.name,
-            `Node at path "${$path}" has no primary node type.`
-          );
-          if (data.jcr.nodeByPath.primaryNodeType.name !== $type) {
-            throw new Error(
-              `Node at path "${$path}" has incompatible type "${data.jcr.nodeByPath.primaryNodeType.name}", expected "${$type}".`
-            );
-          }
-
-          // At this point, the page exists, update it
-          const { error } = await client.mutation(
-            graphql(`
-              mutation (
-                $path: String!
-                $properties: [InputJCRProperty!]!
-                $publish: Boolean!
-                $language: String!
-              ) {
-                jcr {
-                  mutateNode(pathOrId: $path) {
-                    setPropertiesBatch(properties: $properties) {
-                      __typename
-                    }
-                  }
-                }
-                publish: jcr @include(if: $publish) {
-                  mutateNode(pathOrId: $path) {
-                    publish(languages: [$language])
-                  }
-                }
-              }
-            `),
-            { path: $path, properties, publish, language }
-          );
-
-          if (error) throw error;
-        }
+        await upsertNode(client, { path: $path, type: $type, properties, language, publish });
 
         // Render the page in edit mode to trigger area creation
         const response = await client.query(
@@ -222,105 +117,16 @@ try {
           ? resolve(frontmatter.page.$path, frontmatter.content.$subpath)
           : frontmatter.content.$path;
 
-      const { $path, $subpath, $type, $body, ...rawProperties } = content;
-      const properties = Object.entries(rawProperties)
-        .map<ReturnType<typeof graphql.scalar<'InputJCRProperty'>>>(([name, value]) => {
-          if (typeof value !== 'string') throw new Error(`Property "${name}" must be a string.`);
-          return { name, value, language, type: 'STRING' };
-        })
-        .concat({ name: $body, value: html, language, type: 'STRING' });
+      const { $path, $subpath, $type, $body, ...properties } = content;
 
-      // Now the parent node, if any, exists, it's time to create/update the content node
-      // Does the content node exist?
-      const { error } = await client.query(
-        graphql(`
-          query ($path: String!) {
-            jcr {
-              nodeByPath(path: $path) {
-                primaryNodeType {
-                  name
-                }
-              }
-            }
-          }
-        `),
-        { path }
-      );
-
-      if (error?.graphQLErrors.some(({ message }) => message.includes('PathNotFoundException'))) {
-        // It does not exist, create it
-        const { error } = await client.mutation(
-          graphql(`
-            mutation (
-              $parent: String!
-              $name: String!
-              $path: String!
-              $type: String!
-              $properties: [InputJCRProperty!]!
-              $publish: Boolean!
-              $language: String!
-            ) {
-              jcr {
-                addNode(
-                  parentPathOrId: $parent
-                  name: $name
-                  primaryNodeType: $type
-                  properties: $properties
-                ) {
-                  __typename
-                }
-              }
-              publish: jcr @include(if: $publish) {
-                mutateNode(pathOrId: $path) {
-                  publish(languages: [$language])
-                }
-              }
-            }
-          `),
-          {
-            parent: dirname(path),
-            name: basename(path),
-            type: content.$type,
-            properties,
-            publish,
-            language,
-            path,
-          }
-        );
-
-        if (error) throw error;
-      } else if (error) {
-        // Re-throw all other errors
-        throw error;
-      } else {
-        // It exists, update it
-        const { error } = await client.mutation(
-          graphql(`
-            mutation (
-              $path: String!
-              $properties: [InputJCRProperty!]!
-              $publish: Boolean!
-              $language: String!
-            ) {
-              jcr {
-                mutateNode(pathOrId: $path) {
-                  setPropertiesBatch(properties: $properties) {
-                    __typename
-                  }
-                }
-              }
-              publish: jcr @include(if: $publish) {
-                mutateNode(pathOrId: $path) {
-                  publish(languages: [$language])
-                }
-              }
-            }
-          `),
-          { path, properties, publish, language }
-        );
-
-        if (error) throw error;
-      }
+      // Update or create the content node
+      await upsertNode(client, {
+        path,
+        type: $type,
+        properties: { ...properties, [$body]: html },
+        publish,
+        language,
+      });
 
       core.info(`✅ Successfully processed "${file}".`);
     } catch (error) {
