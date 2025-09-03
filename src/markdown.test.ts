@@ -15,10 +15,9 @@ ok: true
 
 Relative image path: ![alt text](relative.png)
 
-${code}html
-<p>
-  <strong>Code blocks are trimmed</strong>
-</p>
+${code}tsx
+// Code blocks are trimmed
+// tsx is changed to js
 ${code}
 
 CMS links are un-escaped: [nice page](/cms/{mode}/{lang}/whatever)
@@ -36,9 +35,8 @@ I'm hidden right?
     data: { matter: { ok: true } },
     value: `<h1>Hello World!</h1>
 <p>Relative image path: <img src="http://example.com/path/to/relative.png" alt="alt text"></p>
-<pre><code class="language-html">&#x3C;p>
-  &#x3C;strong>Code blocks are trimmed&#x3C;/strong>
-&#x3C;/p></code></pre>
+<pre><code class="language-js">// Code blocks are trimmed
+// tsx is changed to js</code></pre>
 <p>CMS links are un-escaped: <a href="/cms/{mode}/{lang}/whatever">nice page</a></p>
 <details><summary>Raw HTML</summary>
 <p>I'm hidden right?</p>

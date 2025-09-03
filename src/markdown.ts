@@ -39,6 +39,12 @@ const processor = unified()
         if (node.children.length === 1 && node.children[0].type === 'text') {
           node.children[0].value = node.children[0].value.trim();
         }
+
+        if (Array.isArray(node.properties.className)) {
+          node.properties.className = node.properties.className.map((className) =>
+            className === 'language-ts' || className === 'language-tsx' ? 'language-js' : className
+          );
+        }
       }
 
       // Fix link placeholders ({mode} and {lang})
