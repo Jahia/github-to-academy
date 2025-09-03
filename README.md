@@ -40,10 +40,10 @@ The most basic use case for this action is mapping one markdown file to one JCR 
 content:
   # The path to the node in the JCR, mandatory
   $path: /sites/academy/home/...
-  # Type of the node, defaults to "jnt:bigText"
+  # Type of the node, defaults to "jacademy:textContent"
   $type: jnt:bigText
   # The name of the prop that holds the HTML content,
-  # defaults to "text" if unset, mandatory for custom node types
+  # defaults to "textContent" if unset, mandatory for custom node types
   $body: text
   # All non $-prefixed properties will be passed as-is to create/update the node
   # Note that mandatory properties must be set

@@ -19,8 +19,8 @@ const ContentSchema = z.object({
     $path: z.string(),
     // We could make the schema "smarter" at the expense of complexity
     // Let's keep it dumb for now
-    $type: z.string().default('jnt:bigText'),
-    $body: z.string().default('text'),
+    $type: z.string().default('jacademy:textContent'),
+    $body: z.string().default('textContent'),
   }),
 });
 
@@ -32,8 +32,8 @@ const PageAndContentSchema = z.object({
   }),
   content: z.looseObject({
     $subpath: z.string(),
-    $type: z.string().default('jnt:bigText'),
-    $body: z.string().default('text'),
+    $type: z.string().default('jacademy:textContent'),
+    $body: z.string().default('textContent'),
   }),
 });
 
