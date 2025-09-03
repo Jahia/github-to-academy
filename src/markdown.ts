@@ -16,7 +16,7 @@ declare module 'vfile' {
     /** URL to the raw file on GitHub. Starts with `https://raw.githubusercontent.com/`. */
     url: string;
     /** Markdown frontmatter. */
-    matter: NonNullable<unknown>;
+    matter: unknown;
   }
 }
 const processor = unified()

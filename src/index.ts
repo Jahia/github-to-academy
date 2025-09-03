@@ -74,6 +74,12 @@ try {
       input.data.url = `https://raw.githubusercontent.com/${github.context.repo.owner}/${github.context.repo.repo}/${github.context.sha}/${file}`;
 
       const output = await toMarkdown(input);
+
+      if (Object.keys(output.data.matter ?? {}).length === 0) {
+        core.info(`⏩ Skipped "${file}" because it has no frontmatter.`);
+        continue;
+      }
+
       const html = `<!-- Pushed at ${new Date().toISOString()} from https://github.com/${
         github.context.repo.owner
       }/${github.context.repo.repo}/blob/${github.context.sha}/${file} -->\n${output}`;
