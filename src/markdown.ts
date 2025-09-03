@@ -1,17 +1,18 @@
-import { Root } from 'hast';
+import type { Root } from 'hast';
+import rehypeRaw from 'rehype-raw';
 import rehypeStringify from 'rehype-stringify';
 import remarkFrontmatter from 'remark-frontmatter';
 import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
 import { unified } from 'unified';
 import { visit } from 'unist-util-visit';
-import type { VFile } from 'vfile';
+import type { VFileCompatible } from 'vfile';
 import { matter } from 'vfile-matter';
 
 declare module 'vfile' {
   interface DataMap {
     /** URL to the raw file on GitHub. Starts with `https://raw.githubusercontent.com/`. */
-    raw: string;
+    url: string;
     /** Markdown frontmatter. */
     matter: NonNullable<unknown>;
   }
@@ -21,14 +22,15 @@ const processor = unified()
   .use(remarkParse)
   .use(remarkFrontmatter)
   .use(() => (tree, file) => matter(file))
-  .use(remarkRehype)
+  .use(remarkRehype, { allowDangerousHtml: true })
+  .use(rehypeRaw)
   .use(() => (tree: Root, file) => {
     visit(tree, 'element', (node) => {
       // Resolve all relative image paths
       if (node.tagName === 'img') {
         const src = node.properties.src;
         if (typeof src === 'string') {
-          node.properties.src = new URL(src, file.data.raw).href;
+          node.properties.src = new URL(src, file.data.url).href;
         }
       }
 
@@ -49,4 +51,4 @@ const processor = unified()
   })
   .use(rehypeStringify);
 
-export const toMarkdown = (file: VFile) => processor.process(file);
+export const toMarkdown = (file: VFileCompatible) => processor.process(file);

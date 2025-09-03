@@ -23,7 +23,7 @@ jobs:
           node-version-file: .node-version
 
       - name: Build the project
-        run: corepack enable && yarn install && yarn build
+        run: corepack enable && yarn install && yarn build && yarn test
 
       - name: Push to ${{ env.VERSION }}
         run: |

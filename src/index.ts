@@ -71,7 +71,7 @@ try {
       const input = await read(file, { encoding: 'utf8' });
 
       // Set the raw URL of the document to resolve relative resources (e.g. images)
-      input.data.raw = `https://raw.githubusercontent.com/${github.context.repo.owner}/${github.context.repo.repo}/${github.context.sha}/${file}`;
+      input.data.url = `https://raw.githubusercontent.com/${github.context.repo.owner}/${github.context.repo.repo}/${github.context.sha}/${file}`;
 
       const output = await toMarkdown(input);
       const html = String(output);

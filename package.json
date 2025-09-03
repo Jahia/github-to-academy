@@ -3,13 +3,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "rolldown src/index.ts -o dist/index.js -p node"
+    "build": "rolldown src/index.ts -o dist/index.js -p node",
+    "test": "node --test"
   },
   "dependencies": {
     "@actions/core": "^1.11.1",
     "@actions/github": "^6.0.1",
     "@urql/core": "^6.0.1",
     "gql.tada": "^1.8.13",
+    "rehype-raw": "^7.0.0",
     "rehype-stringify": "^10.0.1",
     "remark-frontmatter": "^5.0.0",
     "remark-parse": "^11.0.0",
