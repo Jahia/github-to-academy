@@ -42,6 +42,12 @@ I'm orange
 :::info
 I'm blue
 :::
+
+Ensure some directives are NOT processed:
+
+Open localhost:8080.
+
+::ignore
 `,
   };
   const expected: Options = {
@@ -58,7 +64,10 @@ I'm blue
 <div class="alert alert-success"><p>I'm green</p></div>
 <div class="alert alert-danger"><p>I'm red</p></div>
 <div class="alert alert-warning"><p>I'm orange</p></div>
-<div class="alert alert-info"><p>I'm blue</p></div>`,
+<div class="alert alert-info"><p>I'm blue</p></div>
+<p>Ensure some directives are NOT processed:</p>
+<p>Open localhost:8080.</p>
+<p>::ignore</p>`,
   };
 
   try {
