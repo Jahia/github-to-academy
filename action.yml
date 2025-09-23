@@ -18,11 +18,11 @@ inputs:
     required: true
 
   graphql-endpoint:
-    description: 'GraphQL endpoint URL of the Jahia instance to push to.'
+    description: 'GraphQL endpoint URL of the Jahia instance to push to. The Jahia organization has a `secrets.ACADEMY_ENDPOINT` secret that can be used.'
     required: true
 
   graphql-authorization:
-    description: 'Authorization header for the GraphQL endpoint. Any user account can be used with "Basic base64(email:password)".'
+    description: 'Authorization header for the GraphQL endpoint. The Jahia organization has a `secrets.ACADEMY_AUTHORIZATION` secret that can be used.'
     required: true
 
   # Optional parameters, can be individually overridden in markdown frontmatter
