@@ -42,6 +42,8 @@ I'm red
 I'm orange
 :::
 :::info
+I will not get margin-top inline style
+
 I'm blue
 :::
 
@@ -64,10 +66,10 @@ Open localhost:8080.
 <p>I'm hidden right?</p>
 </details>
 <p>Test raw HTML processing <img src="http://example.com/absolute.png" alt=""></p>
-<div class="alert alert-success"><p>I'm green</p></div>
-<div class="alert alert-danger"><p>I'm red</p></div>
-<div class="alert alert-warning"><p>I'm orange</p></div>
-<div class="alert alert-info"><p>I'm blue</p></div>
+<div class="alert alert-success"><p style="margin-bottom:0">I'm green</p></div>
+<div class="alert alert-danger"><p style="margin-bottom:0">I'm red</p></div>
+<div class="alert alert-warning"><p style="margin-bottom:0">I'm orange</p></div>
+<div class="alert alert-info"><p>I will not get margin-top inline style</p><p style="margin-bottom:0">I'm blue</p></div>
 <p>Ensure some directives are NOT processed:</p>
 <p>Open localhost:8080.</p>
 <p>::ignore</p>`,

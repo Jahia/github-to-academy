@@ -98,6 +98,20 @@ const processor = unified()
           .replaceAll('%7Bmode%7D', '{mode}')
           .replaceAll('%7Blang%7D', '{lang}');
       }
+
+      // Remove the ugly asymmetric margin in alert divs
+      // Reference: https://github.com/twbs/bootstrap/blob/0458e76ec1e51c3b8edcecfeb43feea58143f36d/scss/_reboot.scss#L131
+      if (
+        node.tagName === 'p' &&
+        parent?.type === 'element' &&
+        parent?.tagName === 'div' &&
+        // Only change the last paragraph of the alert
+        index === parent.children.length - 1 &&
+        Array.isArray(parent.properties.className) &&
+        parent.properties.className.includes('alert')
+      ) {
+        node.properties.style = 'margin-bottom:0';
+      }
     });
   })
   .use(rehypeStringify);
