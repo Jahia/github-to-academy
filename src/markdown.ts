@@ -45,12 +45,37 @@ const processor = unified()
   .use(remarkRehype, { allowDangerousHtml: true })
   .use(rehypeRaw)
   .use(() => (tree: hast.Root, file) => {
-    visit(tree, 'element', (node) => {
+    visit(tree, 'element', (node, index, parent) => {
       // Resolve all relative image paths
       if (node.tagName === 'img') {
         const src = node.properties.src;
         if (typeof src === 'string') {
           node.properties.src = new URL(src, file.data.url).href;
+        }
+
+        // If the image is the only child of its parent paragraph, we wrap it in a link for lightboxing
+        // Reference: https://github.com/Jahia/jahia-academy-template/blob/2ace39197c27fdd7c762b7aca0dba9e942436c13/src/main/java/org/jahia/modules/academy/filters/AcademyImageUrlRewriter.java#L83-L92
+        if (
+          index === 0 &&
+          parent?.type === 'element' &&
+          parent?.tagName === 'p' &&
+          parent.children.length === 1
+        ) {
+          node.properties.className = ['figure-img', 'img-fluid', 'rounded', 'shadow'];
+          parent.tagName = 'figure';
+          parent.properties.className = ['figure'];
+          parent.children = [
+            {
+              type: 'element',
+              tagName: 'a',
+              properties: {
+                href: node.properties.src,
+                'data-toggle': 'lightbox',
+                'data-gallery': 'doc-images',
+              },
+              children: [node],
+            },
+          ];
         }
       }
 

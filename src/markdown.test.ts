@@ -15,6 +15,8 @@ ok: true
 
 Relative image path: ![alt text](relative.png)
 
+![lone images will be lightboxed](lightbox.png)
+
 ${code}tsx
 // Code blocks are trimmed
 // tsx is changed to js
@@ -54,6 +56,7 @@ Open localhost:8080.
     data: { matter: { ok: true } },
     value: `<h1>Hello World!</h1>
 <p>Relative image path: <img src="http://example.com/path/to/relative.png" alt="alt text"></p>
+<figure class="figure"><a href="http://example.com/path/to/lightbox.png" data-toggle="lightbox" data-gallery="doc-images"><img src="http://example.com/path/to/lightbox.png" alt="lone images will be lightboxed" class="figure-img img-fluid rounded shadow"></a></figure>
 <pre><code class="language-js">// Code blocks are trimmed
 // tsx is changed to js</code></pre>
 <p>CMS links are un-escaped: <a href="/cms/{mode}/{lang}/whatever">nice page</a></p>
