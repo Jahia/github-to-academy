@@ -52,6 +52,8 @@ Ensure some directives are NOT processed:
 Open localhost:8080.
 
 ::ignore
+
+![File upload](/files/{workspace}/sites/www/files/islands%20architecture%20schema.svg)
 `,
   };
   const expected: Options = {
@@ -72,7 +74,8 @@ Open localhost:8080.
 <div class="alert alert-info"><p>I will not get margin-top inline style</p><p style="margin-bottom:0">I'm blue</p></div>
 <p>Ensure some directives are NOT processed:</p>
 <p>Open localhost:8080.</p>
-<p>::ignore</p>`,
+<p>::ignore</p>
+<figure class="figure"><a href="/files/{workspace}/sites/www/files/islands%20architecture%20schema.svg" data-toggle="lightbox" data-gallery="doc-images"><img src="/files/{workspace}/sites/www/files/islands%20architecture%20schema.svg" alt="File upload" class="figure-img img-fluid rounded shadow"></a></figure>`,
   };
 
   try {

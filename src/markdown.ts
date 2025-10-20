@@ -50,7 +50,11 @@ const processor = unified()
       if (node.tagName === 'img') {
         const src = node.properties.src;
         if (typeof src === 'string') {
-          node.properties.src = new URL(src, file.data.url).href;
+          if (/\/files\/(?:\{|%7B)workspace(?:\}|%7D)/.test(src)) {
+            node.properties.src = src.replaceAll('%7Bworkspace%7D', '{workspace}');
+          } else {
+            node.properties.src = new URL(src, file.data.url).href;
+          }
         }
 
         // If the image is the only child of its parent paragraph, we wrap it in a link for lightboxing

@@ -134,7 +134,7 @@ All standard markdown syntax is supported, [with some additional features added 
 
 - Code blocks are trimmed and TypeScript language identifiers (`ts`, `tsx`) are replaced with `js` in the output to be compatible with the list of languages supported by the [hl.js](https://github.com/Jahia/jahia-academy-template/blob/master/src/main/resources/javascript/highlight.min.js) copy of the academy.
 
-- CMS links (links starting with `/cms/{mode}/{lang}`) are supported, and will use the correct vanity URL.
+- CMS links (links starting with `/cms/{mode}/{lang}` or `/files/{workspace}`) are supported, and will use the correct vanity URL.
 
 ## Contributing
 
