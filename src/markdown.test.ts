@@ -54,6 +54,10 @@ Open localhost:8080.
 ::ignore
 
 ![File upload](/files/{workspace}/sites/www/files/islands%20architecture%20schema.svg)
+
+| foo | bar |
+| --- | --- |
+| baz | qux |
 `,
   };
   const expected: Options = {
@@ -75,7 +79,8 @@ Open localhost:8080.
 <p>Ensure some directives are NOT processed:</p>
 <p>Open localhost:8080.</p>
 <p>::ignore</p>
-<figure class="figure"><a href="/files/{workspace}/sites/www/files/islands%20architecture%20schema.svg" data-toggle="lightbox" data-gallery="doc-images"><img src="/files/{workspace}/sites/www/files/islands%20architecture%20schema.svg" alt="File upload" class="figure-img img-fluid rounded shadow"></a></figure>`,
+<figure class="figure"><a href="/files/{workspace}/sites/www/files/islands%20architecture%20schema.svg" data-toggle="lightbox" data-gallery="doc-images"><img src="/files/{workspace}/sites/www/files/islands%20architecture%20schema.svg" alt="File upload" class="figure-img img-fluid rounded shadow"></a></figure>
+\n\n\n\n\n\n\n\n\n\n\n\n\n<table><thead><tr><th>foo</th><th>bar</th></tr></thead><tbody><tr><td>baz</td><td>qux</td></tr></tbody></table>`,
   };
 
   try {
