@@ -5,6 +5,7 @@ import { directive } from 'micromark-extension-directive';
 import rehypeRaw from 'rehype-raw';
 import rehypeStringify from 'rehype-stringify';
 import remarkFrontmatter from 'remark-frontmatter';
+import remarkGfm from 'remark-gfm';
 import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
 import { unified } from 'unified';
@@ -24,6 +25,7 @@ declare module 'vfile' {
 const processor = unified()
   .use(remarkParse)
   .use(remarkFrontmatter)
+  .use(remarkGfm)
   .use(function remarkDirective() {
     // Workaround until https://github.com/micromark/micromark-extension-directive/issues/31 is fixed
     const data = this.data();
