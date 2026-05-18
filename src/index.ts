@@ -51,14 +51,17 @@ try {
   const graphqlEndpoint = new URL(core.getInput('graphql-endpoint', { required: true }));
   const graphqlAuthorization = core.getInput('graphql-authorization', { required: true });
 
+  const headers: Record<string, string> = {
+    Referer: graphqlEndpoint.origin,
+    Authorization: graphqlAuthorization,
+    'X-GitHub-Action': 'github-to-academy',
+  };
+
   const client = new Client({
     url: graphqlEndpoint.toString(),
     exchanges: [fetchExchange],
     fetchOptions: {
-      headers: {
-        Referer: graphqlEndpoint.origin,
-        Authorization: graphqlAuthorization,
-      },
+      headers,
     },
   });
 
