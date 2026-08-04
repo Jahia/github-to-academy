@@ -3,15 +3,17 @@ import * as github from '@actions/github';
 import { Client, fetchExchange } from '@urql/core';
 import { graphql } from 'gql.tada';
 import * as fs from 'node:fs';
-import { resolve } from 'node:path/posix';
+import { dirname, resolve } from 'node:path/posix';
 import { inspect } from 'node:util';
 import { read } from 'to-vfile';
 import * as z from 'zod';
-import { upsertNode } from './api.ts';
+import { ensureFirstChild, upsertNode } from './api.ts';
+import { GITHUB_BANNER_NODE_NAME, githubBannerHtml } from './banner.ts';
 import { toMarkdown } from './markdown.ts';
 
 const defaultPublish = core.getInput('publish') !== 'false';
 const defaultLanguage = core.getInput('language') || 'en';
+const defaultGithubBanner = core.getInput('github-banner') === 'true';
 
 /** Schema to parse the frontmatter in single content node mode. */
 const ContentSchema = z.object({
@@ -42,6 +44,7 @@ const FrontmatterSchema = z
   .object({
     language: z.string().optional().default(defaultLanguage),
     publish: z.boolean().optional().default(defaultPublish),
+    githubBanner: z.boolean().optional().default(defaultGithubBanner),
   })
   .and(ContentSchema.or(PageAndContentSchema));
 
@@ -64,6 +67,12 @@ try {
       headers,
     },
   });
+
+  // Ref used in "edit this content on GitHub" links: point to the branch where
+  // edits happen (the default branch), not to the immutable commit being pushed
+  const editRef =
+    (github.context.payload.repository?.default_branch as string | undefined) ??
+    github.context.ref.replace(/^refs\/(heads|tags)\//, '');
 
   const files = fs.globSync(glob).sort();
 
@@ -138,6 +147,34 @@ try {
         publish,
         language,
       });
+
+      // Optionally maintain a "github-content" banner as the first content of the
+      // page, telling editors that this content is managed on GitHub
+      if ('page' in frontmatter && frontmatter.githubBanner && frontmatter.page.$type === 'jnt:page') {
+        // The banner lives next to the content node
+        const bannerParent = dirname(path);
+
+        await upsertNode(client, {
+          path: resolve(bannerParent, GITHUB_BANNER_NODE_NAME),
+          type: 'jnt:text',
+          properties: {
+            text: githubBannerHtml({
+              owner: github.context.repo.owner,
+              repo: github.context.repo.repo,
+              ref: editRef,
+              file,
+            }),
+            // Keep the banner Work In Progress so it can never reach the live site
+            'j:workInProgressStatus': 'ALL_CONTENT',
+          },
+          language,
+          // Never publish the banner, it is only meant for editors
+          publish: false,
+        });
+
+        // Whether the page is new or already existed, the banner must come first
+        await ensureFirstChild(client, { parent: bannerParent, name: GITHUB_BANNER_NODE_NAME });
+      }
 
       core.info(`✅ Successfully processed "${file}".`);
     } catch (error) {
