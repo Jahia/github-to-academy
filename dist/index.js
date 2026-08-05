@@ -6,7 +6,7 @@ import { basename, dirname, resolve } from "node:path/posix";
 import minpath, { default as path } from "node:path";
 import minproc from "node:process";
 import { fileURLToPath as urlToPath } from "node:url";
-import assert from "node:assert/strict";
+import assert, { AssertionError } from "node:assert/strict";
 
 //#region rolldown:runtime
 var __create$1 = Object.create;
@@ -9947,7 +9947,7 @@ var require_headers = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fetc
 			return headers;
 		}
 	};
-	var Headers$6 = class Headers$6 {
+	var Headers$7 = class Headers$7 {
 		constructor(init = void 0) {
 			if (init === kConstruct$4) return;
 			this[kHeadersList$5] = new HeadersList$2();
@@ -9958,14 +9958,14 @@ var require_headers = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fetc
 			}
 		}
 		append(name$1, value$2) {
-			webidl$10.brandCheck(this, Headers$6);
+			webidl$10.brandCheck(this, Headers$7);
 			webidl$10.argumentLengthCheck(arguments, 2, { header: "Headers.append" });
 			name$1 = webidl$10.converters.ByteString(name$1);
 			value$2 = webidl$10.converters.ByteString(value$2);
 			return appendHeader(this, name$1, value$2);
 		}
 		delete(name$1) {
-			webidl$10.brandCheck(this, Headers$6);
+			webidl$10.brandCheck(this, Headers$7);
 			webidl$10.argumentLengthCheck(arguments, 1, { header: "Headers.delete" });
 			name$1 = webidl$10.converters.ByteString(name$1);
 			if (!isValidHeaderName$1(name$1)) throw webidl$10.errors.invalidArgument({
@@ -9979,7 +9979,7 @@ var require_headers = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fetc
 			this[kHeadersList$5].delete(name$1);
 		}
 		get(name$1) {
-			webidl$10.brandCheck(this, Headers$6);
+			webidl$10.brandCheck(this, Headers$7);
 			webidl$10.argumentLengthCheck(arguments, 1, { header: "Headers.get" });
 			name$1 = webidl$10.converters.ByteString(name$1);
 			if (!isValidHeaderName$1(name$1)) throw webidl$10.errors.invalidArgument({
@@ -9990,7 +9990,7 @@ var require_headers = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fetc
 			return this[kHeadersList$5].get(name$1);
 		}
 		has(name$1) {
-			webidl$10.brandCheck(this, Headers$6);
+			webidl$10.brandCheck(this, Headers$7);
 			webidl$10.argumentLengthCheck(arguments, 1, { header: "Headers.has" });
 			name$1 = webidl$10.converters.ByteString(name$1);
 			if (!isValidHeaderName$1(name$1)) throw webidl$10.errors.invalidArgument({
@@ -10001,7 +10001,7 @@ var require_headers = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fetc
 			return this[kHeadersList$5].contains(name$1);
 		}
 		set(name$1, value$2) {
-			webidl$10.brandCheck(this, Headers$6);
+			webidl$10.brandCheck(this, Headers$7);
 			webidl$10.argumentLengthCheck(arguments, 2, { header: "Headers.set" });
 			name$1 = webidl$10.converters.ByteString(name$1);
 			value$2 = webidl$10.converters.ByteString(value$2);
@@ -10021,7 +10021,7 @@ var require_headers = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fetc
 			this[kHeadersList$5].set(name$1, value$2);
 		}
 		getSetCookie() {
-			webidl$10.brandCheck(this, Headers$6);
+			webidl$10.brandCheck(this, Headers$7);
 			const list$3 = this[kHeadersList$5].cookies;
 			if (list$3) return [...list$3];
 			return [];
@@ -10043,7 +10043,7 @@ var require_headers = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fetc
 			return headers;
 		}
 		keys() {
-			webidl$10.brandCheck(this, Headers$6);
+			webidl$10.brandCheck(this, Headers$7);
 			if (this[kGuard$4] === "immutable") {
 				const value$2 = this[kHeadersSortedMap];
 				return makeIterator(() => value$2, "Headers", "key");
@@ -10051,7 +10051,7 @@ var require_headers = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fetc
 			return makeIterator(() => [...this[kHeadersSortedMap].values()], "Headers", "key");
 		}
 		values() {
-			webidl$10.brandCheck(this, Headers$6);
+			webidl$10.brandCheck(this, Headers$7);
 			if (this[kGuard$4] === "immutable") {
 				const value$2 = this[kHeadersSortedMap];
 				return makeIterator(() => value$2, "Headers", "value");
@@ -10059,7 +10059,7 @@ var require_headers = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fetc
 			return makeIterator(() => [...this[kHeadersSortedMap].values()], "Headers", "value");
 		}
 		entries() {
-			webidl$10.brandCheck(this, Headers$6);
+			webidl$10.brandCheck(this, Headers$7);
 			if (this[kGuard$4] === "immutable") {
 				const value$2 = this[kHeadersSortedMap];
 				return makeIterator(() => value$2, "Headers", "key+value");
@@ -10071,7 +10071,7 @@ var require_headers = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fetc
 		* @param {unknown} thisArg
 		*/
 		forEach(callbackFn, thisArg = globalThis) {
-			webidl$10.brandCheck(this, Headers$6);
+			webidl$10.brandCheck(this, Headers$7);
 			webidl$10.argumentLengthCheck(arguments, 1, { header: "Headers.forEach" });
 			if (typeof callbackFn !== "function") throw new TypeError("Failed to execute 'forEach' on 'Headers': parameter 1 is not of type 'Function'.");
 			for (const [key$1, value$2] of this) callbackFn.apply(thisArg, [
@@ -10081,12 +10081,12 @@ var require_headers = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fetc
 			]);
 		}
 		[Symbol.for("nodejs.util.inspect.custom")]() {
-			webidl$10.brandCheck(this, Headers$6);
+			webidl$10.brandCheck(this, Headers$7);
 			return this[kHeadersList$5];
 		}
 	};
-	Headers$6.prototype[Symbol.iterator] = Headers$6.prototype.entries;
-	Object.defineProperties(Headers$6.prototype, {
+	Headers$7.prototype[Symbol.iterator] = Headers$7.prototype.entries;
+	Object.defineProperties(Headers$7.prototype, {
 		append: kEnumerableProperty$7,
 		delete: kEnumerableProperty$7,
 		get: kEnumerableProperty$7,
@@ -10117,7 +10117,7 @@ var require_headers = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fetc
 	};
 	module.exports = {
 		fill: fill$1,
-		Headers: Headers$6,
+		Headers: Headers$7,
 		HeadersList: HeadersList$2
 	};
 }) });
@@ -10125,7 +10125,7 @@ var require_headers = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fetc
 //#endregion
 //#region node_modules/undici/lib/fetch/response.js
 var require_response = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fetch/response.js": ((exports, module) => {
-	const { Headers: Headers$5, HeadersList: HeadersList$1, fill } = require_headers();
+	const { Headers: Headers$6, HeadersList: HeadersList$1, fill } = require_headers();
 	const { extractBody: extractBody$1, cloneBody: cloneBody$1, mixinBody: mixinBody$1 } = require_body();
 	const util$2 = require_util$6();
 	const { kEnumerableProperty: kEnumerableProperty$6 } = util$2;
@@ -10194,7 +10194,7 @@ var require_response = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fet
 			init = webidl$9.converters.ResponseInit(init);
 			this[kRealm$3] = { settingsObject: {} };
 			this[kState$6] = makeResponse$1({});
-			this[kHeaders$3] = new Headers$5(kConstruct$3);
+			this[kHeaders$3] = new Headers$6(kConstruct$3);
 			this[kHeaders$3][kGuard$3] = "response";
 			this[kHeaders$3][kHeadersList$4] = this[kState$6].headersList;
 			this[kHeaders$3][kRealm$3] = this[kRealm$3];
@@ -10427,7 +10427,7 @@ var require_response = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fet
 //#region node_modules/undici/lib/fetch/request.js
 var require_request = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fetch/request.js": ((exports, module) => {
 	const { extractBody, mixinBody, cloneBody } = require_body();
-	const { Headers: Headers$4, fill: fillHeaders, HeadersList } = require_headers();
+	const { Headers: Headers$5, fill: fillHeaders, HeadersList } = require_headers();
 	const { FinalizationRegistry } = require_dispatcher_weakref()();
 	const util$1 = require_util$6();
 	const { isValidHTTPToken, sameOrigin: sameOrigin$1, normalizeMethod, makePolicyContainer: makePolicyContainer$1, normalizeMethodRecord } = require_util$5();
@@ -10575,7 +10575,7 @@ var require_request = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fetc
 					});
 				}
 			}
-			this[kHeaders$2] = new Headers$4(kConstruct$2);
+			this[kHeaders$2] = new Headers$5(kConstruct$2);
 			this[kHeaders$2][kHeadersList$3] = request$2.headersList;
 			this[kHeaders$2][kGuard$2] = "request";
 			this[kHeaders$2][kRealm$2] = this[kRealm$2];
@@ -10701,7 +10701,7 @@ var require_request = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fetc
 			const clonedRequestObject = new Request$2(kConstruct$2);
 			clonedRequestObject[kState$5] = clonedRequest;
 			clonedRequestObject[kRealm$2] = this[kRealm$2];
-			clonedRequestObject[kHeaders$2] = new Headers$4(kConstruct$2);
+			clonedRequestObject[kHeaders$2] = new Headers$5(kConstruct$2);
 			clonedRequestObject[kHeaders$2][kHeadersList$3] = clonedRequest.headersList;
 			clonedRequestObject[kHeaders$2][kGuard$2] = this[kHeaders$2][kGuard$2];
 			clonedRequestObject[kHeaders$2][kRealm$2] = this[kHeaders$2][kRealm$2];
@@ -10873,7 +10873,7 @@ var require_request = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fetc
 //#region node_modules/undici/lib/fetch/index.js
 var require_fetch = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fetch/index.js": ((exports, module) => {
 	const { Response: Response$1, makeNetworkError, makeAppropriateNetworkError, filterResponse, makeResponse } = require_response();
-	const { Headers: Headers$3 } = require_headers();
+	const { Headers: Headers$4 } = require_headers();
 	const { Request: Request$1, makeRequest: makeRequest$1 } = require_request();
 	const zlib = __require("zlib");
 	const { bytesMatch, makePolicyContainer, clonePolicyContainer, requestBadPort, TAOCheck, appendRequestOriginHeader, responseLocationURL, requestCurrentURL, setRequestReferrerPolicyOnRedirect, tryUpgradeRequestToAPotentiallyTrustworthyURL, createOpaqueTimingInfo, appendFetchMetadata, corsCheck, crossOriginResourcePolicyCheck, determineRequestsReferrer, coarsenedSharedCurrentTime, createDeferredPromise: createDeferredPromise$1, isBlobLike: isBlobLike$1, sameOrigin, isCancelled, isAborted, isErrorLike, fullyReadBody, readableStreamClose, isomorphicEncode, urlIsLocal, urlIsHttpHttpsScheme: urlIsHttpHttpsScheme$1, urlHasHttpsScheme } = require_util$5();
@@ -11469,7 +11469,7 @@ var require_fetch = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fetch/
 					if (status < 200) return;
 					let codings = [];
 					let location$1 = "";
-					const headers = new Headers$3();
+					const headers = new Headers$4();
 					if (Array.isArray(headersList)) for (let n$1 = 0; n$1 < headersList.length; n$1 += 2) {
 						const key$1 = headersList[n$1 + 0].toString("latin1");
 						const val = headersList[n$1 + 1].toString("latin1");
@@ -11526,7 +11526,7 @@ var require_fetch = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fetch/
 				},
 				onUpgrade(status, headersList, socket) {
 					if (status !== 101) return;
-					const headers = new Headers$3();
+					const headers = new Headers$4();
 					for (let n$1 = 0; n$1 < headersList.length; n$1 += 2) {
 						const key$1 = headersList[n$1 + 0].toString("latin1");
 						const val = headersList[n$1 + 1].toString("latin1");
@@ -13183,7 +13183,7 @@ var require_cookies = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/cook
 	const { parseSetCookie } = require_parse();
 	const { stringify: stringify$10 } = require_util$1();
 	const { webidl: webidl$2 } = require_webidl();
-	const { Headers: Headers$2 } = require_headers();
+	const { Headers: Headers$3 } = require_headers();
 	/**
 	* @typedef {Object} Cookie
 	* @property {string} name
@@ -13203,7 +13203,7 @@ var require_cookies = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/cook
 	*/
 	function getCookies(headers) {
 		webidl$2.argumentLengthCheck(arguments, 1, { header: "getCookies" });
-		webidl$2.brandCheck(headers, Headers$2, { strict: false });
+		webidl$2.brandCheck(headers, Headers$3, { strict: false });
 		const cookie = headers.get("cookie");
 		const out = {};
 		if (!cookie) return out;
@@ -13221,7 +13221,7 @@ var require_cookies = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/cook
 	*/
 	function deleteCookie(headers, name$1, attributes$3) {
 		webidl$2.argumentLengthCheck(arguments, 2, { header: "deleteCookie" });
-		webidl$2.brandCheck(headers, Headers$2, { strict: false });
+		webidl$2.brandCheck(headers, Headers$3, { strict: false });
 		name$1 = webidl$2.converters.DOMString(name$1);
 		attributes$3 = webidl$2.converters.DeleteCookieAttributes(attributes$3);
 		setCookie(headers, {
@@ -13237,7 +13237,7 @@ var require_cookies = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/cook
 	*/
 	function getSetCookies(headers) {
 		webidl$2.argumentLengthCheck(arguments, 1, { header: "getSetCookies" });
-		webidl$2.brandCheck(headers, Headers$2, { strict: false });
+		webidl$2.brandCheck(headers, Headers$3, { strict: false });
 		const cookies = headers.getSetCookie();
 		if (!cookies) return [];
 		return cookies.map((pair) => parseSetCookie(pair));
@@ -13249,7 +13249,7 @@ var require_cookies = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/cook
 	*/
 	function setCookie(headers, cookie) {
 		webidl$2.argumentLengthCheck(arguments, 2, { header: "setCookie" });
-		webidl$2.brandCheck(headers, Headers$2, { strict: false });
+		webidl$2.brandCheck(headers, Headers$3, { strict: false });
 		cookie = webidl$2.converters.Cookie(cookie);
 		const str = stringify$10(cookie);
 		if (str) headers.append("Set-Cookie", stringify$10(cookie));
@@ -13737,7 +13737,7 @@ var require_connection = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/w
 	const { CloseEvent } = require_events();
 	const { makeRequest } = require_request();
 	const { fetching } = require_fetch();
-	const { Headers: Headers$1 } = require_headers();
+	const { Headers: Headers$2 } = require_headers();
 	const { getGlobalDispatcher: getGlobalDispatcher$2 } = require_global();
 	const { kHeadersList } = require_symbols$4();
 	const channels$1 = {};
@@ -13770,7 +13770,7 @@ var require_connection = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/w
 			redirect: "error"
 		});
 		if (options.headers) {
-			const headersList = new Headers$1(options.headers)[kHeadersList];
+			const headersList = new Headers$2(options.headers)[kHeadersList];
 			request$2.headersList = headersList;
 		}
 		const keyValue = crypto$1.randomBytes(16).toString("base64");
@@ -14656,11 +14656,11 @@ var require_lib = /* @__PURE__ */ __commonJS({ "node_modules/@actions/http-clien
 		HttpCodes$1[HttpCodes$1["ServiceUnavailable"] = 503] = "ServiceUnavailable";
 		HttpCodes$1[HttpCodes$1["GatewayTimeout"] = 504] = "GatewayTimeout";
 	})(HttpCodes || (exports.HttpCodes = HttpCodes = {}));
-	var Headers;
-	(function(Headers$7) {
-		Headers$7["Accept"] = "accept";
-		Headers$7["ContentType"] = "content-type";
-	})(Headers || (exports.Headers = Headers = {}));
+	var Headers$1;
+	(function(Headers$8) {
+		Headers$8["Accept"] = "accept";
+		Headers$8["ContentType"] = "content-type";
+	})(Headers$1 || (exports.Headers = Headers$1 = {}));
 	var MediaTypes;
 	(function(MediaTypes$1) {
 		MediaTypes$1["ApplicationJson"] = "application/json";
@@ -14810,7 +14810,7 @@ var require_lib = /* @__PURE__ */ __commonJS({ "node_modules/@actions/http-clien
 		*/
 		getJson(requestUrl, additionalHeaders = {}) {
 			return __awaiter$10(this, void 0, void 0, function* () {
-				additionalHeaders[Headers.Accept] = this._getExistingOrDefaultHeader(additionalHeaders, Headers.Accept, MediaTypes.ApplicationJson);
+				additionalHeaders[Headers$1.Accept] = this._getExistingOrDefaultHeader(additionalHeaders, Headers$1.Accept, MediaTypes.ApplicationJson);
 				const res = yield this.get(requestUrl, additionalHeaders);
 				return this._processResponse(res, this.requestOptions);
 			});
@@ -14818,8 +14818,8 @@ var require_lib = /* @__PURE__ */ __commonJS({ "node_modules/@actions/http-clien
 		postJson(requestUrl, obj, additionalHeaders = {}) {
 			return __awaiter$10(this, void 0, void 0, function* () {
 				const data = JSON.stringify(obj, null, 2);
-				additionalHeaders[Headers.Accept] = this._getExistingOrDefaultHeader(additionalHeaders, Headers.Accept, MediaTypes.ApplicationJson);
-				additionalHeaders[Headers.ContentType] = this._getExistingOrDefaultHeader(additionalHeaders, Headers.ContentType, MediaTypes.ApplicationJson);
+				additionalHeaders[Headers$1.Accept] = this._getExistingOrDefaultHeader(additionalHeaders, Headers$1.Accept, MediaTypes.ApplicationJson);
+				additionalHeaders[Headers$1.ContentType] = this._getExistingOrDefaultHeader(additionalHeaders, Headers$1.ContentType, MediaTypes.ApplicationJson);
 				const res = yield this.post(requestUrl, data, additionalHeaders);
 				return this._processResponse(res, this.requestOptions);
 			});
@@ -14827,8 +14827,8 @@ var require_lib = /* @__PURE__ */ __commonJS({ "node_modules/@actions/http-clien
 		putJson(requestUrl, obj, additionalHeaders = {}) {
 			return __awaiter$10(this, void 0, void 0, function* () {
 				const data = JSON.stringify(obj, null, 2);
-				additionalHeaders[Headers.Accept] = this._getExistingOrDefaultHeader(additionalHeaders, Headers.Accept, MediaTypes.ApplicationJson);
-				additionalHeaders[Headers.ContentType] = this._getExistingOrDefaultHeader(additionalHeaders, Headers.ContentType, MediaTypes.ApplicationJson);
+				additionalHeaders[Headers$1.Accept] = this._getExistingOrDefaultHeader(additionalHeaders, Headers$1.Accept, MediaTypes.ApplicationJson);
+				additionalHeaders[Headers$1.ContentType] = this._getExistingOrDefaultHeader(additionalHeaders, Headers$1.ContentType, MediaTypes.ApplicationJson);
 				const res = yield this.put(requestUrl, data, additionalHeaders);
 				return this._processResponse(res, this.requestOptions);
 			});
@@ -14836,8 +14836,8 @@ var require_lib = /* @__PURE__ */ __commonJS({ "node_modules/@actions/http-clien
 		patchJson(requestUrl, obj, additionalHeaders = {}) {
 			return __awaiter$10(this, void 0, void 0, function* () {
 				const data = JSON.stringify(obj, null, 2);
-				additionalHeaders[Headers.Accept] = this._getExistingOrDefaultHeader(additionalHeaders, Headers.Accept, MediaTypes.ApplicationJson);
-				additionalHeaders[Headers.ContentType] = this._getExistingOrDefaultHeader(additionalHeaders, Headers.ContentType, MediaTypes.ApplicationJson);
+				additionalHeaders[Headers$1.Accept] = this._getExistingOrDefaultHeader(additionalHeaders, Headers$1.Accept, MediaTypes.ApplicationJson);
+				additionalHeaders[Headers$1.ContentType] = this._getExistingOrDefaultHeader(additionalHeaders, Headers$1.ContentType, MediaTypes.ApplicationJson);
 				const res = yield this.patch(requestUrl, data, additionalHeaders);
 				return this._processResponse(res, this.requestOptions);
 			});
@@ -25412,6 +25412,31 @@ function superRefine(fn) {
 }
 
 //#endregion
+//#region src/retry.ts
+/**
+* Retries `fn` until it succeeds, `shouldRetry` rejects the error, or
+* `attempts` runs out, waiting `delayMs` between attempts.
+*
+* The defaults (5 attempts, 2s apart) are tuned to cover the JCR cluster
+* synchronization delay of the Academy (~5s): even if a request lands on a
+* server that has not seen a freshly created node yet, one of the retries
+* will. See also `createStickyFetch`, the first line of defense.
+*/
+const retry = async (fn, { attempts = 5, delayMs = 2e3, shouldRetry = () => true } = {}) => {
+	let lastError;
+	for (let attempt = 1; attempt <= attempts; attempt++) try {
+		return await fn();
+	} catch (error$2) {
+		lastError = error$2;
+		if (attempt === attempts || !shouldRetry(error$2)) throw error$2;
+		await new Promise((resolve$1) => setTimeout(resolve$1, delayMs));
+	}
+	throw lastError;
+};
+/** True when the error is a JCR PathNotFoundException surfaced through GraphQL. */
+const isPathNotFound = (error$2) => error$2 instanceof Error && error$2.message.includes("PathNotFoundException");
+
+//#endregion
 //#region src/api.ts
 /** Inserts or updates a node. */
 const upsertNode = async (client, { path: path$7, type: type$1, properties: rawProperties, language, publish: publish$1 }) => {
@@ -25502,22 +25527,25 @@ const upsertNode = async (client, { path: path$7, type: type$1, properties: rawP
 * reordering the children if needed. The node must already exist.
 */
 const ensureFirstChild = async (client, { parent, name: name$1 }) => {
-	const { data, error: error$2 } = await client.query(t(`
-      query ($path: String!) {
-        jcr {
-          nodeByPath(path: $path) {
-            children {
-              nodes {
-                name
+	const names = await retry(async () => {
+		const { data, error: error$2 } = await client.query(t(`
+          query ($path: String!) {
+            jcr {
+              nodeByPath(path: $path) {
+                children {
+                  nodes {
+                    name
+                  }
+                }
               }
             }
           }
-        }
-      }
-    `), { path: parent });
-	if (error$2) throw error$2;
-	const names = data?.jcr.nodeByPath?.children.nodes.map((node$1) => node$1?.name) ?? [];
-	assert(names.includes(name$1), `Node "${name$1}" not found under "${parent}".`);
+        `), { path: parent });
+		if (error$2) throw error$2;
+		const names$1 = data?.jcr.nodeByPath?.children.nodes.map((node$1) => node$1?.name) ?? [];
+		assert(names$1.includes(name$1), `Node "${name$1}" not found under "${parent}".`);
+		return names$1;
+	}, { shouldRetry: (error$2) => isPathNotFound(error$2) || error$2 instanceof AssertionError });
 	if (names[0] === name$1) return;
 	const result = await client.mutation(t(`
       mutation ($path: String!, $names: [String!]!) {
@@ -64773,6 +64801,34 @@ const processor = unified().use(remarkParse).use(remarkFrontmatter).use(remarkGf
 const toMarkdown = (file) => processor.process(file);
 
 //#endregion
+//#region src/sticky-fetch.ts
+/**
+* The Academy runs as a cluster behind a load balancer: without session
+* affinity, consecutive requests may hit different servers, and JCR cluster
+* synchronization is not instantaneous — a node created by one request may
+* not be visible to the next one yet. Replaying the load balancer's session
+* cookies (e.g. SERVERID, slb_route) keeps all requests of a run on the same
+* server. See also `retry` for the complementary belt-and-braces mechanism.
+*/
+const createStickyFetch = (baseFetch = fetch) => {
+	const cookies = /* @__PURE__ */ new Map();
+	return async (input, init) => {
+		const headers = new Headers(init?.headers);
+		if (cookies.size > 0) headers.set("cookie", [...cookies].map(([name$1, value$2]) => `${name$1}=${value$2}`).join("; "));
+		const response = await baseFetch(input, {
+			...init,
+			headers
+		});
+		for (const cookie of response.headers.getSetCookie()) {
+			const [pair] = cookie.split(";");
+			const separator = pair.indexOf("=");
+			if (separator > 0) cookies.set(pair.slice(0, separator).trim(), pair.slice(separator + 1).trim());
+		}
+		return response;
+	};
+};
+
+//#endregion
 //#region src/index.ts
 const defaultPublish = import_core.getInput("publish") !== "false";
 const defaultLanguage = import_core.getInput("language") || "en";
@@ -64813,6 +64869,7 @@ try {
 	const client = new C({
 		url: graphqlEndpoint.toString(),
 		exchanges: [fetchExchange],
+		fetch: createStickyFetch(),
 		fetchOptions: { headers }
 	});
 	const editRef = import_github.context.payload.repository.default_branch ?? import_github.context.ref.replace(/^refs\/(heads|tags)\//, "");
@@ -64838,27 +64895,29 @@ try {
 				language,
 				publish: publish$1
 			});
-			const response = await client.query(t(`
-              query ($path: String!, $language: String!) {
-                jcr {
-                  nodeByPath(path: $path) {
-                    renderedContent(
-                      contextConfiguration: "gwt"
-                      isEditMode: true
-                      language: $language
-                      view: "default"
-                      templateType: "html"
-                    ) {
-                      output
+			await retry(async () => {
+				const response = await client.query(t(`
+                  query ($path: String!, $language: String!) {
+                    jcr {
+                      nodeByPath(path: $path) {
+                        renderedContent(
+                          contextConfiguration: "gwt"
+                          isEditMode: true
+                          language: $language
+                          view: "default"
+                          templateType: "html"
+                        ) {
+                          output
+                        }
+                      }
                     }
                   }
-                }
-              }
-            `), {
-				path: $path$1,
-				language
-			});
-			if (response.error) throw response.error;
+                `), {
+					path: $path$1,
+					language
+				});
+				if (response.error) throw response.error;
+			}, { shouldRetry: isPathNotFound });
 		}
 		const path$7 = "page" in frontmatter$1 ? resolve(frontmatter$1.page.$path, frontmatter$1.content.$subpath) : frontmatter$1.content.$path;
 		const { $path, $subpath, $type, $body,...properties } = content$2;
