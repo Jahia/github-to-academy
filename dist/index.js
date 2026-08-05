@@ -4979,7 +4979,7 @@ var require_request$1 = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/co
 		channels$3.trailers = { hasSubscribers: false };
 		channels$3.error = { hasSubscribers: false };
 	}
-	var Request$4 = class Request$4 {
+	var Request$5 = class Request$5 {
 		constructor(origin, { path: path$7, method, body: body$2, headers, query, idempotent, blocking, upgrade: upgrade$1, headersTimeout, bodyTimeout, reset, throwOnError, expectContinue }, handler$2) {
 			if (typeof path$7 !== "string") throw new InvalidArgumentError$20("path must be a string");
 			else if (path$7[0] !== "/" && !(path$7.startsWith("http://") || path$7.startsWith("https://")) && method !== "CONNECT") throw new InvalidArgumentError$20("path must be an absolute URL or start with a slash");
@@ -5154,7 +5154,7 @@ var require_request$1 = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/co
 			return this;
 		}
 		static [kHTTP1BuildRequest$1](origin, opts, handler$2) {
-			return new Request$4(origin, opts, handler$2);
+			return new Request$5(origin, opts, handler$2);
 		}
 		static [kHTTP2BuildRequest$1](origin, opts, handler$2) {
 			const headers = opts.headers;
@@ -5162,7 +5162,7 @@ var require_request$1 = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/co
 				...opts,
 				headers: null
 			};
-			const request$2 = new Request$4(origin, opts, handler$2);
+			const request$2 = new Request$5(origin, opts, handler$2);
 			request$2.headers = {};
 			if (Array.isArray(headers)) {
 				if (headers.length % 2 !== 0) throw new InvalidArgumentError$20("headers array must be even");
@@ -5222,7 +5222,7 @@ var require_request$1 = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/co
 		else if (skipAppend) request$2.headers[key$1] = processHeaderValue(key$1, val, skipAppend);
 		else request$2.headers += processHeaderValue(key$1, val);
 	}
-	module.exports = Request$4;
+	module.exports = Request$5;
 }) });
 
 //#endregion
@@ -6010,7 +6010,7 @@ var require_client = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/clien
 	const { pipeline: pipeline$2 } = __require("stream");
 	const util$12 = require_util$6();
 	const timers = require_timers();
-	const Request$3 = require_request$1();
+	const Request$4 = require_request$1();
 	const DispatcherBase$3 = require_dispatcher_base();
 	const { RequestContentLengthMismatchError, ResponseContentLengthMismatchError, InvalidArgumentError: InvalidArgumentError$16, RequestAbortedError: RequestAbortedError$8, HeadersTimeoutError, HeadersOverflowError, SocketError: SocketError$2, InformationalError, BodyTimeoutError, HTTPParserError, ResponseExceededMaxSizeError, ClientDestroyedError } = require_errors$1();
 	const buildConnector$3 = require_connect();
@@ -6146,7 +6146,7 @@ var require_client = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/clien
 		}
 		[kDispatch$2](opts, handler$2) {
 			const origin = opts.origin || this[kUrl$3].origin;
-			const request$2 = this[kHTTPConnVersion] === "h2" ? Request$3[kHTTP2BuildRequest](origin, opts, handler$2) : Request$3[kHTTP1BuildRequest](origin, opts, handler$2);
+			const request$2 = this[kHTTPConnVersion] === "h2" ? Request$4[kHTTP2BuildRequest](origin, opts, handler$2) : Request$4[kHTTP1BuildRequest](origin, opts, handler$2);
 			this[kQueue$1].push(request$2);
 			if (this[kResuming]) {} else if (util$12.bodyLength(request$2.body) == null && util$12.isIterable(request$2.body)) {
 				this[kResuming] = 1;
@@ -6963,7 +6963,7 @@ var require_client = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/clien
 	function writeH2(client, session, request$2) {
 		const { body: body$2, method, path: path$7, host, upgrade: upgrade$1, expectContinue, signal, headers: reqHeaders } = request$2;
 		let headers;
-		if (typeof reqHeaders === "string") headers = Request$3[kHTTP2CopyHeaders](reqHeaders.trim());
+		if (typeof reqHeaders === "string") headers = Request$4[kHTTP2CopyHeaders](reqHeaders.trim());
 		else headers = reqHeaders;
 		if (upgrade$1) {
 			errorRequest(client, request$2, /* @__PURE__ */ new Error("Upgrade not supported for H2"));
@@ -10445,7 +10445,7 @@ var require_request = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fetc
 	const requestFinalizer = new FinalizationRegistry(({ signal, abort: abort$1 }) => {
 		signal.removeEventListener("abort", abort$1);
 	});
-	var Request$2 = class Request$2 {
+	var Request$3 = class Request$3 {
 		constructor(input, init = {}) {
 			if (input === kConstruct$2) return;
 			webidl$8.argumentLengthCheck(arguments, 1, { header: "Request constructor" });
@@ -10473,7 +10473,7 @@ var require_request = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fetc
 				request$2 = makeRequest$2({ urlList: [parsedURL] });
 				fallbackMode = "cors";
 			} else {
-				assert$5(input instanceof Request$2);
+				assert$5(input instanceof Request$3);
 				request$2 = input[kState$5];
 				signal = input[kSignal];
 			}
@@ -10593,7 +10593,7 @@ var require_request = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fetc
 					headersList.cookies = headers.cookies;
 				} else fillHeaders(this[kHeaders$2], headers);
 			}
-			const inputBody = input instanceof Request$2 ? input[kState$5].body : null;
+			const inputBody = input instanceof Request$3 ? input[kState$5].body : null;
 			if ((init.body != null || inputBody != null) && (request$2.method === "GET" || request$2.method === "HEAD")) throw new TypeError("Request with GET/HEAD method cannot have body.");
 			let initBody = null;
 			if (init.body != null) {
@@ -10622,83 +10622,83 @@ var require_request = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fetc
 			this[kState$5].body = finalBody;
 		}
 		get method() {
-			webidl$8.brandCheck(this, Request$2);
+			webidl$8.brandCheck(this, Request$3);
 			return this[kState$5].method;
 		}
 		get url() {
-			webidl$8.brandCheck(this, Request$2);
+			webidl$8.brandCheck(this, Request$3);
 			return URLSerializer$2(this[kState$5].url);
 		}
 		get headers() {
-			webidl$8.brandCheck(this, Request$2);
+			webidl$8.brandCheck(this, Request$3);
 			return this[kHeaders$2];
 		}
 		get destination() {
-			webidl$8.brandCheck(this, Request$2);
+			webidl$8.brandCheck(this, Request$3);
 			return this[kState$5].destination;
 		}
 		get referrer() {
-			webidl$8.brandCheck(this, Request$2);
+			webidl$8.brandCheck(this, Request$3);
 			if (this[kState$5].referrer === "no-referrer") return "";
 			if (this[kState$5].referrer === "client") return "about:client";
 			return this[kState$5].referrer.toString();
 		}
 		get referrerPolicy() {
-			webidl$8.brandCheck(this, Request$2);
+			webidl$8.brandCheck(this, Request$3);
 			return this[kState$5].referrerPolicy;
 		}
 		get mode() {
-			webidl$8.brandCheck(this, Request$2);
+			webidl$8.brandCheck(this, Request$3);
 			return this[kState$5].mode;
 		}
 		get credentials() {
 			return this[kState$5].credentials;
 		}
 		get cache() {
-			webidl$8.brandCheck(this, Request$2);
+			webidl$8.brandCheck(this, Request$3);
 			return this[kState$5].cache;
 		}
 		get redirect() {
-			webidl$8.brandCheck(this, Request$2);
+			webidl$8.brandCheck(this, Request$3);
 			return this[kState$5].redirect;
 		}
 		get integrity() {
-			webidl$8.brandCheck(this, Request$2);
+			webidl$8.brandCheck(this, Request$3);
 			return this[kState$5].integrity;
 		}
 		get keepalive() {
-			webidl$8.brandCheck(this, Request$2);
+			webidl$8.brandCheck(this, Request$3);
 			return this[kState$5].keepalive;
 		}
 		get isReloadNavigation() {
-			webidl$8.brandCheck(this, Request$2);
+			webidl$8.brandCheck(this, Request$3);
 			return this[kState$5].reloadNavigation;
 		}
 		get isHistoryNavigation() {
-			webidl$8.brandCheck(this, Request$2);
+			webidl$8.brandCheck(this, Request$3);
 			return this[kState$5].historyNavigation;
 		}
 		get signal() {
-			webidl$8.brandCheck(this, Request$2);
+			webidl$8.brandCheck(this, Request$3);
 			return this[kSignal];
 		}
 		get body() {
-			webidl$8.brandCheck(this, Request$2);
+			webidl$8.brandCheck(this, Request$3);
 			return this[kState$5].body ? this[kState$5].body.stream : null;
 		}
 		get bodyUsed() {
-			webidl$8.brandCheck(this, Request$2);
+			webidl$8.brandCheck(this, Request$3);
 			return !!this[kState$5].body && util$1.isDisturbed(this[kState$5].body.stream);
 		}
 		get duplex() {
-			webidl$8.brandCheck(this, Request$2);
+			webidl$8.brandCheck(this, Request$3);
 			return "half";
 		}
 		clone() {
-			webidl$8.brandCheck(this, Request$2);
+			webidl$8.brandCheck(this, Request$3);
 			if (this.bodyUsed || this.body?.locked) throw new TypeError("unusable");
 			const clonedRequest = cloneRequest(this[kState$5]);
-			const clonedRequestObject = new Request$2(kConstruct$2);
+			const clonedRequestObject = new Request$3(kConstruct$2);
 			clonedRequestObject[kState$5] = clonedRequest;
 			clonedRequestObject[kRealm$2] = this[kRealm$2];
 			clonedRequestObject[kHeaders$2] = new Headers$5(kConstruct$2);
@@ -10714,7 +10714,7 @@ var require_request = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fetc
 			return clonedRequestObject;
 		}
 	};
-	mixinBody(Request$2);
+	mixinBody(Request$3);
 	function makeRequest$2(init) {
 		const request$2 = {
 			method: "GET",
@@ -10766,7 +10766,7 @@ var require_request = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fetc
 		if (request$2.body != null) newRequest.body = cloneBody(request$2.body);
 		return newRequest;
 	}
-	Object.defineProperties(Request$2.prototype, {
+	Object.defineProperties(Request$3.prototype, {
 		method: kEnumerableProperty$5,
 		url: kEnumerableProperty$5,
 		headers: kEnumerableProperty$5,
@@ -10792,10 +10792,10 @@ var require_request = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fetc
 			configurable: true
 		}
 	});
-	webidl$8.converters.Request = webidl$8.interfaceConverter(Request$2);
+	webidl$8.converters.Request = webidl$8.interfaceConverter(Request$3);
 	webidl$8.converters.RequestInfo = function(V) {
 		if (typeof V === "string") return webidl$8.converters.USVString(V);
-		if (V instanceof Request$2) return webidl$8.converters.Request(V);
+		if (V instanceof Request$3) return webidl$8.converters.Request(V);
 		return webidl$8.converters.USVString(V);
 	};
 	webidl$8.converters.AbortSignal = webidl$8.interfaceConverter(AbortSignal);
@@ -10864,7 +10864,7 @@ var require_request = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fetc
 		}
 	]);
 	module.exports = {
-		Request: Request$2,
+		Request: Request$3,
 		makeRequest: makeRequest$2
 	};
 }) });
@@ -10874,7 +10874,7 @@ var require_request = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fetc
 var require_fetch = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fetch/index.js": ((exports, module) => {
 	const { Response: Response$1, makeNetworkError, makeAppropriateNetworkError, filterResponse, makeResponse } = require_response();
 	const { Headers: Headers$4 } = require_headers();
-	const { Request: Request$1, makeRequest: makeRequest$1 } = require_request();
+	const { Request: Request$2, makeRequest: makeRequest$1 } = require_request();
 	const zlib = __require("zlib");
 	const { bytesMatch, makePolicyContainer, clonePolicyContainer, requestBadPort, TAOCheck, appendRequestOriginHeader, responseLocationURL, requestCurrentURL, setRequestReferrerPolicyOnRedirect, tryUpgradeRequestToAPotentiallyTrustworthyURL, createOpaqueTimingInfo, appendFetchMetadata, corsCheck, crossOriginResourcePolicyCheck, determineRequestsReferrer, coarsenedSharedCurrentTime, createDeferredPromise: createDeferredPromise$1, isBlobLike: isBlobLike$1, sameOrigin, isCancelled, isAborted, isErrorLike, fullyReadBody, readableStreamClose, isomorphicEncode, urlIsLocal, urlIsHttpHttpsScheme: urlIsHttpHttpsScheme$1, urlHasHttpsScheme } = require_util$5();
 	const { kState: kState$4, kHeaders: kHeaders$1, kGuard: kGuard$1, kRealm: kRealm$1 } = require_symbols$3();
@@ -10923,7 +10923,7 @@ var require_fetch = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/fetch/
 		const p$2 = createDeferredPromise$1();
 		let requestObject;
 		try {
-			requestObject = new Request$1(input, init);
+			requestObject = new Request$2(input, init);
 		} catch (e$3) {
 			p$2.reject(e$3);
 			return p$2.promise;
@@ -12325,7 +12325,7 @@ var require_cache = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/cache/
 	const { kHeadersList: kHeadersList$1 } = require_symbols$4();
 	const { webidl: webidl$4 } = require_webidl();
 	const { Response, cloneResponse } = require_response();
-	const { Request } = require_request();
+	const { Request: Request$1 } = require_request();
 	const { kState, kHeaders, kGuard, kRealm } = require_symbols$3();
 	const { fetching: fetching$1 } = require_fetch();
 	const { urlIsHttpHttpsScheme, createDeferredPromise, readAllBytes } = require_util$5();
@@ -12368,10 +12368,10 @@ var require_cache = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/cache/
 			options = webidl$4.converters.CacheQueryOptions(options);
 			let r$1 = null;
 			if (request$2 !== void 0) {
-				if (request$2 instanceof Request) {
+				if (request$2 instanceof Request$1) {
 					r$1 = request$2[kState];
 					if (r$1.method !== "GET" && !options.ignoreMethod) return [];
-				} else if (typeof request$2 === "string") r$1 = new Request(request$2)[kState];
+				} else if (typeof request$2 === "string") r$1 = new Request$1(request$2)[kState];
 			}
 			const responses = [];
 			if (request$2 === void 0) for (const requestResponse of this.#relevantRequestResponseList) responses.push(requestResponse[1]);
@@ -12416,7 +12416,7 @@ var require_cache = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/cache/
 			/** @type {ReturnType<typeof fetching>[]} */
 			const fetchControllers = [];
 			for (const request$2 of requests) {
-				const r$1 = new Request(request$2)[kState];
+				const r$1 = new Request$1(request$2)[kState];
 				if (!urlIsHttpHttpsScheme(r$1.url)) throw webidl$4.errors.exception({
 					header: "Cache.addAll",
 					message: "Expected http/s scheme."
@@ -12488,8 +12488,8 @@ var require_cache = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/cache/
 			request$2 = webidl$4.converters.RequestInfo(request$2);
 			response = webidl$4.converters.Response(response);
 			let innerRequest = null;
-			if (request$2 instanceof Request) innerRequest = request$2[kState];
-			else innerRequest = new Request(request$2)[kState];
+			if (request$2 instanceof Request$1) innerRequest = request$2[kState];
+			else innerRequest = new Request$1(request$2)[kState];
 			if (!urlIsHttpHttpsScheme(innerRequest.url) || innerRequest.method !== "GET") throw webidl$4.errors.exception({
 				header: "Cache.put",
 				message: "Expected an http/s scheme when method is not GET"
@@ -12550,12 +12550,12 @@ var require_cache = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/cache/
 			* @type {Request}
 			*/
 			let r$1 = null;
-			if (request$2 instanceof Request) {
+			if (request$2 instanceof Request$1) {
 				r$1 = request$2[kState];
 				if (r$1.method !== "GET" && !options.ignoreMethod) return false;
 			} else {
 				assert$2(typeof request$2 === "string");
-				r$1 = new Request(request$2)[kState];
+				r$1 = new Request$1(request$2)[kState];
 			}
 			/** @type {CacheBatchOperation[]} */
 			const operations = [];
@@ -12592,10 +12592,10 @@ var require_cache = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/cache/
 			options = webidl$4.converters.CacheQueryOptions(options);
 			let r$1 = null;
 			if (request$2 !== void 0) {
-				if (request$2 instanceof Request) {
+				if (request$2 instanceof Request$1) {
 					r$1 = request$2[kState];
 					if (r$1.method !== "GET" && !options.ignoreMethod) return [];
-				} else if (typeof request$2 === "string") r$1 = new Request(request$2)[kState];
+				} else if (typeof request$2 === "string") r$1 = new Request$1(request$2)[kState];
 			}
 			const promise = createDeferredPromise();
 			const requests = [];
@@ -12607,7 +12607,7 @@ var require_cache = /* @__PURE__ */ __commonJS({ "node_modules/undici/lib/cache/
 			queueMicrotask(() => {
 				const requestList = [];
 				for (const request$3 of requests) {
-					const requestObject = new Request("https://a");
+					const requestObject = new Request$1("https://a");
 					requestObject[kState] = request$3;
 					requestObject[kHeaders][kHeadersList$1] = request$3.headersList;
 					requestObject[kHeaders][kGuard] = "immutable";
@@ -25423,6 +25423,7 @@ function superRefine(fn) {
 * will. See also `createStickyFetch`, the first line of defense.
 */
 const retry = async (fn, { attempts = 5, delayMs = 2e3, shouldRetry = () => true } = {}) => {
+	if (attempts < 1) throw new RangeError(`retry attempts must be >= 1, got ${attempts}`);
 	let lastError;
 	for (let attempt = 1; attempt <= attempts; attempt++) try {
 		return await fn();
@@ -25650,12 +25651,16 @@ const GITHUB_BANNER_NODE_NAME = "github-content";
 * the content is managed on GitHub, with a link to the source markdown file.
 */
 const githubBannerHtml = ({ owner, repo, ref, file }) => {
-	const repoUrl = `https://github.com/${owner}/${repo}`;
-	const fileUrl = `${repoUrl}/blob/${ref}/${file}`;
+	const repoUrl = `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
+	const fileUrl = `${repoUrl}/blob/${encodePath(ref)}/${encodePath(file)}`;
 	return `<div class="alert alert-info">
-    This content is managed on GitHub and pushed to the Academy automatically: any change made directly in Jahia will be overwritten. To edit this content, modify <a href="${fileUrl}">${file}</a> in <a href="${repoUrl}">${owner}/${repo}</a> instead.
+    This content is managed on GitHub and pushed to the Academy automatically: any change made directly in Jahia will be overwritten. To edit this content, modify <a href="${escapeHtml(fileUrl)}">${escapeHtml(file)}</a> in <a href="${escapeHtml(repoUrl)}">${escapeHtml(`${owner}/${repo}`)}</a> instead.
 </div>`;
 };
+/** Escapes a value for use in HTML text and attribute contexts. */
+const escapeHtml = (value$2) => value$2.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("\"", "&quot;");
+/** URL-encodes a path (branch name, file path) segment by segment. */
+const encodePath = (path$7) => path$7.split("/").map(encodeURIComponent).join("/");
 
 //#endregion
 //#region node_modules/ccount/index.js
@@ -64880,8 +64885,13 @@ const toMarkdown = (file) => processor.process(file);
 const createStickyFetch = (baseFetch = fetch) => {
 	const cookies = /* @__PURE__ */ new Map();
 	return async (input, init) => {
-		const headers = new Headers(init?.headers);
-		if (cookies.size > 0) headers.set("cookie", [...cookies].map(([name$1, value$2]) => `${name$1}=${value$2}`).join("; "));
+		const headers = new Headers(input instanceof Request ? input.headers : void 0);
+		new Headers(init?.headers).forEach((value$2, name$1) => headers.set(name$1, value$2));
+		if (cookies.size > 0) {
+			const jar = [...cookies].map(([name$1, value$2]) => `${name$1}=${value$2}`).join("; ");
+			const existing = headers.get("cookie");
+			headers.set("cookie", existing ? `${existing}; ${jar}` : jar);
+		}
 		const response = await baseFetch(input, {
 			...init,
 			headers
