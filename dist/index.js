@@ -25616,9 +25616,10 @@ const GITHUB_BANNER_NODE_NAME = "github-content";
 * the content is managed on GitHub, with a link to the source markdown file.
 */
 const githubBannerHtml = ({ owner, repo, ref, file }) => {
-	const url = `https://github.com/${owner}/${repo}/blob/${ref}/${file}`;
+	const repoUrl = `https://github.com/${owner}/${repo}`;
+	const fileUrl = `${repoUrl}/blob/${ref}/${file}`;
 	return `<div class="alert alert-info">
-    This content is managed on GitHub and pushed to the Academy automatically: any change made directly in Jahia will be overwritten. To edit this content, modify <a href="${url}">${file} in ${owner}/${repo}</a> instead.
+    This content is managed on GitHub and pushed to the Academy automatically: any change made directly in Jahia will be overwritten. To edit this content, modify <a href="${fileUrl}">${file}</a> in <a href="${repoUrl}">${owner}/${repo}</a> instead.
 </div>`;
 };
 
