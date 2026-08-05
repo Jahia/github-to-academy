@@ -25650,11 +25650,13 @@ const GITHUB_BANNER_NODE_NAME = "github-content";
 * HTML content of the banner node: an informational alert telling editors that
 * the content is managed on GitHub, with a link to the source markdown file.
 */
-const githubBannerHtml = ({ owner, repo, ref, file }) => {
+const githubBannerHtml = ({ owner, repo, ref, file, sha, date: date$2 }) => {
 	const repoUrl = `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
 	const fileUrl = `${repoUrl}/blob/${encodePath(ref)}/${encodePath(file)}`;
+	const commitUrl = `${repoUrl}/commit/${encodeURIComponent(sha)}`;
 	return `<div class="alert alert-info">
     This content is managed on GitHub and pushed to the Academy automatically: any change made directly in Jahia will be overwritten. To edit this content, modify <a href="${escapeHtml(fileUrl)}">${escapeHtml(file)}</a> in <a href="${escapeHtml(repoUrl)}">${escapeHtml(`${owner}/${repo}`)}</a> instead.
+    <br><small>Last pushed on ${escapeHtml(date$2)} from commit <a href="${escapeHtml(commitUrl)}">${escapeHtml(sha.slice(0, 7))}</a>.</small>
 </div>`;
 };
 /** Escapes a value for use in HTML text and attribute contexts. */
@@ -65026,7 +65028,9 @@ try {
 						owner: import_github.context.repo.owner,
 						repo: import_github.context.repo.repo,
 						ref: editRef,
-						file
+						file,
+						sha: import_github.context.sha,
+						date: (/* @__PURE__ */ new Date()).toISOString().slice(0, 10)
 					}),
 					"j:workInProgressStatus": "ALL_CONTENT"
 				},
