@@ -25438,20 +25438,33 @@ const isPathNotFound = (error$2) => error$2 instanceof Error && error$2.message.
 
 //#endregion
 //#region src/api.ts
+/**
+* Marker property stamped on every node created (or knowingly overwritten) by
+* this action, carried by the jmix:unstructured mixin. Its presence tells
+* subsequent runs the node is managed from GitHub and safe to update; without
+* it, updates are refused unless the document opts in with `overwrite: true`.
+*/
+const MANAGED_MARKER = "githubToAcademyManaged";
 /** Inserts or updates a node. */
-const upsertNode = async (client, { path: path$7, type: type$1, properties: rawProperties, language, publish: publish$1 }) => {
-	const properties = prepareProperties(rawProperties, language);
+const upsertNode = async (client, { path: path$7, type: type$1, properties: rawProperties, language, publish: publish$1, overwrite = false }) => {
 	const { data, error: error$2 } = await client.query(t(`
-      query ($path: String!) {
+      query ($path: String!, $marker: String!, $language: String!) {
         jcr {
           nodeByPath(path: $path) {
             primaryNodeType {
               name
             }
+            property(name: $marker, language: $language) {
+              value
+            }
           }
         }
       }
-    `), { path: path$7 });
+    `), {
+		path: path$7,
+		marker: MANAGED_MARKER,
+		language
+	});
 	if (error$2?.graphQLErrors.some(({ message }) => message.includes("PathNotFoundException"))) {
 		const { error: error$3 } = await client.mutation(t(`
         mutation (
@@ -25468,6 +25481,7 @@ const upsertNode = async (client, { path: path$7, type: type$1, properties: rawP
               parentPathOrId: $parent
               name: $name
               primaryNodeType: $type
+              mixins: ["jmix:unstructured"]
               properties: $properties
             ) {
               __typename
@@ -25484,7 +25498,10 @@ const upsertNode = async (client, { path: path$7, type: type$1, properties: rawP
 			name: basename(path$7),
 			path: path$7,
 			type: type$1,
-			properties,
+			properties: prepareProperties({
+				...rawProperties,
+				[MANAGED_MARKER]: "true"
+			}, language),
 			publish: publish$1,
 			language
 		});
@@ -25493,6 +25510,20 @@ const upsertNode = async (client, { path: path$7, type: type$1, properties: rawP
 	else {
 		assert(data?.jcr.nodeByPath?.primaryNodeType.name, `Node at path "${path$7}" has no primary node type.`);
 		assert.equal(data.jcr.nodeByPath.primaryNodeType.name, type$1, `Node at path "${path$7}" has an unexpected node type.`);
+		const isManaged = Boolean(data.jcr.nodeByPath.property?.value);
+		if (!isManaged && !overwrite) throw new Error(`Refusing to update "${path$7}": this node was not created by github-to-academy. Add "overwrite: true" to the frontmatter of this document to take ownership of it.`);
+		if (!isManaged) {
+			const mixin = await client.mutation(t(`
+          mutation ($path: String!) {
+            jcr {
+              mutateNode(pathOrId: $path) {
+                addMixins(mixins: ["jmix:unstructured"])
+              }
+            }
+          }
+        `), { path: path$7 });
+			if (mixin.error) throw mixin.error;
+		}
 		const { error: error$3 } = await client.mutation(t(`
         mutation (
           $path: String!
@@ -25515,7 +25546,10 @@ const upsertNode = async (client, { path: path$7, type: type$1, properties: rawP
         }
       `), {
 			path: path$7,
-			properties,
+			properties: prepareProperties(isManaged ? rawProperties : {
+				...rawProperties,
+				[MANAGED_MARKER]: "true"
+			}, language),
 			publish: publish$1,
 			language
 		});
@@ -64888,7 +64922,8 @@ const PageAndContentSchema = object({
 const FrontmatterSchema = object({
 	language: string$7().optional().default(defaultLanguage),
 	publish: boolean$2().optional().default(defaultPublish),
-	githubBanner: boolean$2().optional().default(defaultGithubBanner)
+	githubBanner: boolean$2().optional().default(defaultGithubBanner),
+	overwrite: boolean$2().optional().default(false)
 }).and(ContentSchema.or(PageAndContentSchema));
 try {
 	const glob = import_core.getInput("files", { required: true });
@@ -64918,7 +64953,7 @@ try {
 		}
 		const html$8 = `<!-- Pushed at ${(/* @__PURE__ */ new Date()).toISOString()} from https://github.com/${import_github.context.repo.owner}/${import_github.context.repo.repo}/blob/${import_github.context.sha}/${file} -->\n${output}`;
 		const frontmatter$1 = FrontmatterSchema.parse(output.data.matter);
-		const { language, publish: publish$1, content: content$2 } = frontmatter$1;
+		const { language, publish: publish$1, overwrite, content: content$2 } = frontmatter$1;
 		if ("page" in frontmatter$1) {
 			const { $path: $path$1, $type: $type$1,...properties$1 } = frontmatter$1.page;
 			await upsertNode(client, {
@@ -64926,7 +64961,8 @@ try {
 				type: $type$1,
 				properties: properties$1,
 				language,
-				publish: publish$1
+				publish: publish$1,
+				overwrite
 			});
 			await retry(async () => {
 				const response = await client.query(t(`
@@ -64962,7 +64998,8 @@ try {
 				[$body]: html$8
 			},
 			publish: publish$1,
-			language
+			language,
+			overwrite
 		});
 		if ("page" in frontmatter$1 && frontmatter$1.githubBanner && frontmatter$1.page.$type === "jnt:page") {
 			const bannerParent = dirname(path$7);
@@ -64984,7 +65021,8 @@ try {
 					"j:workInProgressStatus": "ALL_CONTENT"
 				},
 				language,
-				publish: false
+				publish: false,
+				overwrite: true
 			});
 			await ensureFirstChild(client, {
 				parent: bannerParent,
