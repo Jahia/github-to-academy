@@ -24,3 +24,17 @@ test('github banner html', () => {
   // The node name is part of the action's contract, guard against accidental renames
   assert.equal(GITHUB_BANNER_NODE_NAME, 'github-content');
 });
+
+test('github banner html escapes and encodes special characters', () => {
+  const html = githubBannerHtml({
+    owner: 'Jahia',
+    repo: 'academy-docs',
+    ref: 'feat/#42',
+    file: 'docs/a&b "c".md',
+  });
+
+  // URL segments are percent-encoded, visible text is HTML-escaped
+  assert.ok(html.includes('/blob/feat/%2342/docs/a%26b%20%22c%22.md"'));
+  assert.ok(html.includes('>docs/a&amp;b &quot;c&quot;.md</a>'));
+  assert.ok(!html.includes('a&b "c".md</a>'));
+});

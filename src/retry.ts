@@ -19,6 +19,8 @@ export const retry = async <T>(
     shouldRetry?: (error: unknown) => boolean;
   } = {}
 ): Promise<T> => {
+  if (attempts < 1) throw new RangeError(`retry attempts must be >= 1, got ${attempts}`);
+
   let lastError: unknown;
   for (let attempt = 1; attempt <= attempts; attempt++) {
     try {

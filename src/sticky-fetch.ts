@@ -10,9 +10,15 @@ export const createStickyFetch = (baseFetch: typeof fetch = fetch): typeof fetch
   const cookies = new Map<string, string>();
 
   return async (input, init) => {
-    const headers = new Headers(init?.headers);
+    // Merge headers from a Request input and from init (init wins), so
+    // neither source is lost when adding the cookie header
+    const headers = new Headers(input instanceof Request ? input.headers : undefined);
+    new Headers(init?.headers).forEach((value, name) => headers.set(name, value));
+
     if (cookies.size > 0) {
-      headers.set('cookie', [...cookies].map(([name, value]) => `${name}=${value}`).join('; '));
+      const jar = [...cookies].map(([name, value]) => `${name}=${value}`).join('; ');
+      const existing = headers.get('cookie');
+      headers.set('cookie', existing ? `${existing}; ${jar}` : jar);
     }
 
     const response = await baseFetch(input, { ...init, headers });
