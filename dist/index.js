@@ -25523,6 +25523,38 @@ const upsertNode = async (client, { path: path$7, type: type$1, properties: rawP
 	}
 };
 /**
+* Deletes the node at `path` when it exists with a primary type other than
+* `type`, so it can be re-created with the right type by a following
+* `upsertNode` (which asserts on type mismatches instead). Only use this for
+* nodes fully owned by the action (e.g. the github-content banner), where
+* dropping and re-creating is always safe.
+*/
+const deleteIfTypeDiffers = async (client, { path: path$7, type: type$1 }) => {
+	const { data, error: error$2 } = await client.query(t(`
+      query ($path: String!) {
+        jcr {
+          nodeByPath(path: $path) {
+            primaryNodeType {
+              name
+            }
+          }
+        }
+      }
+    `), { path: path$7 });
+	if (error$2?.graphQLErrors.some(({ message }) => message.includes("PathNotFoundException"))) return;
+	if (error$2) throw error$2;
+	const currentType = data?.jcr.nodeByPath?.primaryNodeType.name;
+	if (!currentType || currentType === type$1) return;
+	const result = await client.mutation(t(`
+      mutation ($path: String!) {
+        jcr {
+          deleteNode(pathOrId: $path)
+        }
+      }
+    `), { path: path$7 });
+	if (result.error) throw result.error;
+};
+/**
 * Ensures the node named `name` under `parent` is its first child node,
 * reordering the children if needed. The node must already exist.
 */
@@ -64933,9 +64965,14 @@ try {
 		});
 		if ("page" in frontmatter$1 && frontmatter$1.githubBanner && frontmatter$1.page.$type === "jnt:page") {
 			const bannerParent = dirname(path$7);
+			const bannerPath = resolve(bannerParent, GITHUB_BANNER_NODE_NAME);
+			await deleteIfTypeDiffers(client, {
+				path: bannerPath,
+				type: "jnt:bigText"
+			});
 			await upsertNode(client, {
-				path: resolve(bannerParent, GITHUB_BANNER_NODE_NAME),
-				type: "jnt:text",
+				path: bannerPath,
+				type: "jnt:bigText",
 				properties: {
 					text: githubBannerHtml({
 						owner: import_github.context.repo.owner,
