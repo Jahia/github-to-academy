@@ -1,7 +1,8 @@
 import type { Client } from '@urql/core';
 import { graphql } from 'gql.tada';
-import assert from 'node:assert/strict';
+import assert, { AssertionError } from 'node:assert/strict';
 import { basename, dirname } from 'node:path/posix';
+import { isPathNotFound, retry } from './retry.ts';
 
 /** Inserts or updates a node. */
 export const upsertNode = async (
@@ -133,27 +134,35 @@ export const ensureFirstChild = async (
   client: Client,
   { parent, name }: { parent: string; name: string }
 ) => {
-  const { data, error } = await client.query(
-    graphql(`
-      query ($path: String!) {
-        jcr {
-          nodeByPath(path: $path) {
-            children {
-              nodes {
-                name
+  // Right after its creation, the child may not be visible cluster-wide yet,
+  // so retry both a missing parent and a missing child (see retry.ts)
+  const names = await retry(
+    async () => {
+      const { data, error } = await client.query(
+        graphql(`
+          query ($path: String!) {
+            jcr {
+              nodeByPath(path: $path) {
+                children {
+                  nodes {
+                    name
+                  }
+                }
               }
             }
           }
-        }
-      }
-    `),
-    { path: parent }
+        `),
+        { path: parent }
+      );
+
+      if (error) throw error;
+
+      const names = data?.jcr.nodeByPath?.children.nodes.map((node) => node?.name) ?? [];
+      assert(names.includes(name), `Node "${name}" not found under "${parent}".`);
+      return names;
+    },
+    { shouldRetry: (error) => isPathNotFound(error) || error instanceof AssertionError }
   );
-
-  if (error) throw error;
-
-  const names = data?.jcr.nodeByPath?.children.nodes.map((node) => node?.name) ?? [];
-  assert(names.includes(name), `Node "${name}" not found under "${parent}".`);
 
   // Already the first child, nothing to do
   if (names[0] === name) return;

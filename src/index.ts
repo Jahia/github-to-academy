@@ -10,6 +10,8 @@ import * as z from 'zod';
 import { ensureFirstChild, upsertNode } from './api.ts';
 import { GITHUB_BANNER_NODE_NAME, githubBannerHtml } from './banner.ts';
 import { toMarkdown } from './markdown.ts';
+import { isPathNotFound, retry } from './retry.ts';
+import { createStickyFetch } from './sticky-fetch.ts';
 
 const defaultPublish = core.getInput('publish') !== 'false';
 const defaultLanguage = core.getInput('language') || 'en';
@@ -63,6 +65,9 @@ try {
   const client = new Client({
     url: graphqlEndpoint.toString(),
     exchanges: [fetchExchange],
+    // The Academy is a cluster: stick to one server for the whole run so that
+    // freshly created nodes are visible to the requests that follow
+    fetch: createStickyFetch(),
     fetchOptions: {
       headers,
     },
@@ -105,31 +110,37 @@ try {
 
         await upsertNode(client, { path: $path, type: $type, properties, language, publish });
 
-        // Render the page in edit mode to trigger area creation
-        const response = await client.query(
-          graphql(
-            `
-              query ($path: String!, $language: String!) {
-                jcr {
-                  nodeByPath(path: $path) {
-                    renderedContent(
-                      contextConfiguration: "gwt"
-                      isEditMode: true
-                      language: $language
-                      view: "default"
-                      templateType: "html"
-                    ) {
-                      output
+        // Render the page in edit mode to trigger area creation. A freshly
+        // created page may not be visible cluster-wide yet, hence the retry.
+        await retry(
+          async () => {
+            const response = await client.query(
+              graphql(
+                `
+                  query ($path: String!, $language: String!) {
+                    jcr {
+                      nodeByPath(path: $path) {
+                        renderedContent(
+                          contextConfiguration: "gwt"
+                          isEditMode: true
+                          language: $language
+                          view: "default"
+                          templateType: "html"
+                        ) {
+                          output
+                        }
+                      }
                     }
                   }
-                }
-              }
-            `
-          ),
-          { path: $path, language }
-        );
+                `
+              ),
+              { path: $path, language }
+            );
 
-        if (response.error) throw response.error;
+            if (response.error) throw response.error;
+          },
+          { shouldRetry: isPathNotFound }
+        );
       }
 
       const path =
