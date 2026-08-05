@@ -185,6 +185,8 @@ try {
               repo: github.context.repo.repo,
               ref: editRef,
               file,
+              sha: github.context.sha,
+              date: new Date().toISOString().slice(0, 10),
             }),
             // Keep the banner Work In Progress so it can never reach the live site
             'j:workInProgressStatus': 'ALL_CONTENT',

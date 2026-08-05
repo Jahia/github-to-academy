@@ -8,6 +8,8 @@ test('github banner html', () => {
     repo: 'academy-docs',
     ref: 'main',
     file: 'security/security-advisories/jsa-2026-test.md',
+    sha: 'abc1234def567890000000000000000000000000',
+    date: '2026-08-05',
   });
 
   assert.ok(html.startsWith('<div class="alert alert-info">'));
@@ -21,6 +23,13 @@ test('github banner html', () => {
   );
   assert.ok(html.includes(' in <a href="https://github.com/Jahia/academy-docs">Jahia/academy-docs</a>'));
 
+  // The push date and the 7-character commit hash, linked to the commit
+  assert.ok(
+    html.includes(
+      'Last pushed on 2026-08-05 from commit <a href="https://github.com/Jahia/academy-docs/commit/abc1234def567890000000000000000000000000">abc1234</a>.'
+    )
+  );
+
   // The node name is part of the action's contract, guard against accidental renames
   assert.equal(GITHUB_BANNER_NODE_NAME, 'github-content');
 });
@@ -31,6 +40,8 @@ test('github banner html escapes and encodes special characters', () => {
     repo: 'academy-docs',
     ref: 'feat/#42',
     file: 'docs/a&b "c".md',
+    sha: 'abc1234def567890000000000000000000000000',
+    date: '2026-08-05',
   });
 
   // URL segments are percent-encoded, visible text is HTML-escaped
