@@ -30,7 +30,7 @@ export const githubBannerHtml = ({
   const commitUrl = `${repoUrl}/commit/${encodeURIComponent(sha)}`;
   return `<div class="alert alert-info">
     This content is managed on GitHub and pushed to the Academy automatically: any change made directly in Jahia will be overwritten. To edit this content, modify <a href="${escapeHtml(fileUrl)}">${escapeHtml(file)}</a> in <a href="${escapeHtml(repoUrl)}">${escapeHtml(`${owner}/${repo}`)}</a> instead.
-    <br><small>Last pushed on ${escapeHtml(date)} from commit <a href="${escapeHtml(commitUrl)}">${escapeHtml(sha.slice(0, 7))}</a>.</small>
+    <div style="text-align: right"><small>Last pushed on ${escapeHtml(date)} from commit <a href="${escapeHtml(commitUrl)}">${escapeHtml(sha.slice(0, 7))}</a>.</small></div>
 </div>`;
 };
 
