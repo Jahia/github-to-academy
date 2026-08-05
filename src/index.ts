@@ -7,7 +7,7 @@ import { dirname, resolve } from 'node:path/posix';
 import { inspect } from 'node:util';
 import { read } from 'to-vfile';
 import * as z from 'zod';
-import { ensureFirstChild, upsertNode } from './api.ts';
+import { deleteIfTypeDiffers, ensureFirstChild, upsertNode } from './api.ts';
 import { GITHUB_BANNER_NODE_NAME, githubBannerHtml } from './banner.ts';
 import { toMarkdown } from './markdown.ts';
 import { isPathNotFound, retry } from './retry.ts';
@@ -164,10 +164,17 @@ try {
       if ('page' in frontmatter && frontmatter.githubBanner && frontmatter.page.$type === 'jnt:page') {
         // The banner lives next to the content node
         const bannerParent = dirname(path);
+        const bannerPath = resolve(bannerParent, GITHUB_BANNER_NODE_NAME);
 
+        // The banner is fully owned by the action: if an earlier version left
+        // it with another type, replace it instead of failing the upsert
+        await deleteIfTypeDiffers(client, { path: bannerPath, type: 'jnt:bigText' });
+
+        // jnt:bigText (not jnt:text): its "text" property is a richtext, so
+        // the alert markup is rendered as HTML instead of being escaped
         await upsertNode(client, {
-          path: resolve(bannerParent, GITHUB_BANNER_NODE_NAME),
-          type: 'jnt:text',
+          path: bannerPath,
+          type: 'jnt:bigText',
           properties: {
             text: githubBannerHtml({
               owner: github.context.repo.owner,

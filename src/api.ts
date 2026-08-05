@@ -127,6 +127,55 @@ export const upsertNode = async (
 };
 
 /**
+ * Deletes the node at `path` when it exists with a primary type other than
+ * `type`, so it can be re-created with the right type by a following
+ * `upsertNode` (which asserts on type mismatches instead). Only use this for
+ * nodes fully owned by the action (e.g. the github-content banner), where
+ * dropping and re-creating is always safe.
+ */
+export const deleteIfTypeDiffers = async (
+  client: Client,
+  { path, type }: { path: string; type: string }
+) => {
+  const { data, error } = await client.query(
+    graphql(`
+      query ($path: String!) {
+        jcr {
+          nodeByPath(path: $path) {
+            primaryNodeType {
+              name
+            }
+          }
+        }
+      }
+    `),
+    { path }
+  );
+
+  // Nothing to delete
+  if (error?.graphQLErrors.some(({ message }) => message.includes('PathNotFoundException'))) {
+    return;
+  }
+  if (error) throw error;
+
+  const currentType = data?.jcr.nodeByPath?.primaryNodeType.name;
+  if (!currentType || currentType === type) return;
+
+  const result = await client.mutation(
+    graphql(`
+      mutation ($path: String!) {
+        jcr {
+          deleteNode(pathOrId: $path)
+        }
+      }
+    `),
+    { path }
+  );
+
+  if (result.error) throw result.error;
+};
+
+/**
  * Ensures the node named `name` under `parent` is its first child node,
  * reordering the children if needed. The node must already exist.
  */

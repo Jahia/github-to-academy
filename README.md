@@ -119,8 +119,9 @@ overwritten by the next push. To make that visible to editors, enable the option
 ```
 
 When enabled, for every document whose page is of type `jnt:page`, the action creates a
-`jnt:text` node named `github-content` next to the content node, containing an alert that
-links to the source markdown file on the repository's default branch:
+`jnt:bigText` node named `github-content` next to the content node, containing an alert that
+links to the source markdown file on the repository's default branch (`jnt:bigText` because
+its `text` property is a richtext, so the alert markup is rendered instead of escaped):
 
 ```html
 <div class="alert alert-info">
