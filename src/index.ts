@@ -47,6 +47,9 @@ const FrontmatterSchema = z
     language: z.string().optional().default(defaultLanguage),
     publish: z.boolean().optional().default(defaultPublish),
     githubBanner: z.boolean().optional().default(defaultGithubBanner),
+    // Deliberately not configurable at the action level: taking over content
+    // that was not pushed by this action must be a per-document decision
+    overwrite: z.boolean().optional().default(false),
   })
   .and(ContentSchema.or(PageAndContentSchema));
 
@@ -102,13 +105,13 @@ try {
       }/${github.context.repo.repo}/blob/${github.context.sha}/${file} -->\n${output}`;
 
       const frontmatter = FrontmatterSchema.parse(output.data.matter);
-      const { language, publish, content } = frontmatter;
+      const { language, publish, overwrite, content } = frontmatter;
 
       // If `page` is defined, we need to create/update the page first
       if ('page' in frontmatter) {
         const { $path, $type, ...properties } = frontmatter.page;
 
-        await upsertNode(client, { path: $path, type: $type, properties, language, publish });
+        await upsertNode(client, { path: $path, type: $type, properties, language, publish, overwrite });
 
         // Render the page in edit mode to trigger area creation. A freshly
         // created page may not be visible cluster-wide yet, hence the retry.
@@ -157,6 +160,7 @@ try {
         properties: { ...properties, [$body]: html },
         publish,
         language,
+        overwrite,
       });
 
       // Optionally maintain a "github-content" banner as the first content of the
@@ -188,6 +192,8 @@ try {
           language,
           // Never publish the banner, it is only meant for editors
           publish: false,
+          // The github-content node is owned by the action by definition
+          overwrite: true,
         });
 
         // Whether the page is new or already existed, the banner must come first

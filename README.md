@@ -100,8 +100,31 @@ publish: false
 
 # Enforce or prevent the GitHub banner for individual pages (see below)
 githubBanner: true
+
+# Take ownership of nodes that were not created by this action (see
+# "Overwrite protection" below). Defaults to false.
+overwrite: true
 ---
 ```
+
+### Overwrite protection
+
+Every node created by this action is stamped with a `githubToAcademyManaged` marker
+property (carried by the `jmix:unstructured` mixin). On update:
+
+- **Marker present** — the node is managed from GitHub, the update proceeds.
+- **Marker absent** — the node holds content that was *not* pushed by this action
+  (e.g. a page maintained by editors directly in Jahia). The update is **refused**
+  with an explicit error, so a misconfigured `$path` cannot silently destroy Academy
+  content.
+
+To intentionally take over such a node, add `overwrite: true` to the top-level
+frontmatter of the document. The first successful push then stamps the marker, so the
+flag can (and should) be removed afterwards.
+
+> **Migrating existing content**: nodes pushed by versions of this action that predate
+> the marker carry no marker either — their documents need one push with
+> `overwrite: true` to adopt them.
 
 ### Pointing editors back to GitHub
 
