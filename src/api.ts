@@ -1,7 +1,16 @@
 import type { Client } from '@urql/core';
 import { graphql } from 'gql.tada';
-import assert from 'node:assert/strict';
+import assert, { AssertionError } from 'node:assert/strict';
 import { basename, dirname } from 'node:path/posix';
+import { isPathNotFound, retry } from './retry.ts';
+
+/**
+ * Marker property stamped on every node created (or knowingly overwritten) by
+ * this action, carried by the jmix:unstructured mixin. Its presence tells
+ * subsequent runs the node is managed from GitHub and safe to update; without
+ * it, updates are refused unless the document opts in with `overwrite: true`.
+ */
+export const MANAGED_MARKER = 'githubToAcademyManaged';
 
 /** Inserts or updates a node. */
 export const upsertNode = async (
@@ -12,34 +21,40 @@ export const upsertNode = async (
     properties: rawProperties,
     language,
     publish,
+    overwrite = false,
   }: {
     path: string;
     type: string;
     properties: Record<string, unknown>;
     language: string;
     publish: boolean;
+    /** Allow updating a node that does not carry the MANAGED_MARKER property. */
+    overwrite?: boolean;
   }
 ) => {
-  const properties = prepareProperties(rawProperties, language);
-
-  // Fetch the node to see if it exists and if it's of a compatible node type
+  // Fetch the node to see if it exists, if it's of a compatible node type,
+  // and whether it is marked as managed by this action
   const { data, error } = await client.query(
     graphql(`
-      query ($path: String!) {
+      query ($path: String!, $marker: String!, $language: String!) {
         jcr {
           nodeByPath(path: $path) {
             primaryNodeType {
               name
             }
+            property(name: $marker, language: $language) {
+              value
+            }
           }
         }
       }
     `),
-    { path }
+    { path, marker: MANAGED_MARKER, language }
   );
 
   if (error?.graphQLErrors.some(({ message }) => message.includes('PathNotFoundException'))) {
-    // If the node was not found, we create it
+    // If the node was not found, we create it — with the managed marker, so
+    // future runs know this node is owned by the action
     const { error } = await client.mutation(
       graphql(`
         mutation (
@@ -56,6 +71,7 @@ export const upsertNode = async (
               parentPathOrId: $parent
               name: $name
               primaryNodeType: $type
+              mixins: ["jmix:unstructured"]
               properties: $properties
             ) {
               __typename
@@ -73,7 +89,7 @@ export const upsertNode = async (
         name: basename(path),
         path,
         type,
-        properties,
+        properties: prepareProperties({ ...rawProperties, [MANAGED_MARKER]: 'true' }, language),
         publish,
         language,
       }
@@ -95,7 +111,35 @@ export const upsertNode = async (
       `Node at path "${path}" has an unexpected node type.`
     );
 
-    // At this point, the node exists, update it
+    // The node exists but does not carry the managed marker: it holds content
+    // that was not pushed by this action, refuse to silently overwrite it
+    const isManaged = Boolean(data.jcr.nodeByPath.property?.value);
+    if (!isManaged && !overwrite) {
+      throw new Error(
+        `Refusing to update "${path}": this node was not created by github-to-academy. ` +
+          'Add "overwrite: true" to the frontmatter of this document to take ownership of it.'
+      );
+    }
+
+    if (!isManaged) {
+      // Take ownership: allow the marker property on this node, it is then
+      // stamped by the update below so future runs need no overwrite flag
+      const mixin = await client.mutation(
+        graphql(`
+          mutation ($path: String!) {
+            jcr {
+              mutateNode(pathOrId: $path) {
+                addMixins(mixins: ["jmix:unstructured"])
+              }
+            }
+          }
+        `),
+        { path }
+      );
+      if (mixin.error) throw mixin.error;
+    }
+
+    // At this point, the node exists and we are allowed to update it
     const { error } = await client.mutation(
       graphql(`
         mutation (
@@ -118,11 +162,125 @@ export const upsertNode = async (
           }
         }
       `),
-      { path, properties, publish, language }
+      {
+        path,
+        properties: prepareProperties(
+          isManaged ? rawProperties : { ...rawProperties, [MANAGED_MARKER]: 'true' },
+          language
+        ),
+        publish,
+        language,
+      }
     );
 
     if (error) throw error;
   }
+};
+
+/**
+ * Deletes the node at `path` when it exists with a primary type other than
+ * `type`, so it can be re-created with the right type by a following
+ * `upsertNode` (which asserts on type mismatches instead). Only use this for
+ * nodes fully owned by the action (e.g. the github-content banner), where
+ * dropping and re-creating is always safe.
+ */
+export const deleteIfTypeDiffers = async (
+  client: Client,
+  { path, type }: { path: string; type: string }
+) => {
+  const { data, error } = await client.query(
+    graphql(`
+      query ($path: String!) {
+        jcr {
+          nodeByPath(path: $path) {
+            primaryNodeType {
+              name
+            }
+          }
+        }
+      }
+    `),
+    { path }
+  );
+
+  // Nothing to delete
+  if (error?.graphQLErrors.some(({ message }) => message.includes('PathNotFoundException'))) {
+    return;
+  }
+  if (error) throw error;
+
+  const currentType = data?.jcr.nodeByPath?.primaryNodeType.name;
+  if (!currentType || currentType === type) return;
+
+  const result = await client.mutation(
+    graphql(`
+      mutation ($path: String!) {
+        jcr {
+          deleteNode(pathOrId: $path)
+        }
+      }
+    `),
+    { path }
+  );
+
+  if (result.error) throw result.error;
+};
+
+/**
+ * Ensures the node named `name` under `parent` is its first child node,
+ * reordering the children if needed. The node must already exist.
+ */
+export const ensureFirstChild = async (
+  client: Client,
+  { parent, name }: { parent: string; name: string }
+) => {
+  // Right after its creation, the child may not be visible cluster-wide yet,
+  // so retry both a missing parent and a missing child (see retry.ts)
+  const names = await retry(
+    async () => {
+      const { data, error } = await client.query(
+        graphql(`
+          query ($path: String!) {
+            jcr {
+              nodeByPath(path: $path) {
+                children {
+                  nodes {
+                    name
+                  }
+                }
+              }
+            }
+          }
+        `),
+        { path: parent }
+      );
+
+      if (error) throw error;
+
+      const names = data?.jcr.nodeByPath?.children.nodes.map((node) => node?.name) ?? [];
+      assert(names.includes(name), `Node "${name}" not found under "${parent}".`);
+      return names;
+    },
+    { shouldRetry: (error) => isPathNotFound(error) || error instanceof AssertionError }
+  );
+
+  // Already the first child, nothing to do
+  if (names[0] === name) return;
+
+  const result = await client.mutation(
+    graphql(`
+      mutation ($path: String!, $names: [String!]!) {
+        jcr {
+          mutateNode(pathOrId: $path) {
+            reorderChildren(names: $names, position: FIRST)
+          }
+        }
+      }
+    `),
+    { path: parent, names: [name] }
+  );
+
+  if (result.error) throw result.error;
 };
 
 /** Transforms a POJO (`{name: "value"}`) into the right GraphQL input object. */
