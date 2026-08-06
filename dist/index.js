@@ -64912,6 +64912,12 @@ const createStickyFetch = (baseFetch = fetch) => {
 const defaultPublish = import_core.getInput("publish") !== "false";
 const defaultLanguage = import_core.getInput("language") || "en";
 const defaultGithubBanner = import_core.getInput("github-banner") === "true";
+/**
+* Maximum number of passes over the files. A file can fail because it links
+* to a page that comes later in the same batch: by the next pass that page
+* exists, so retrying the whole file is enough to resolve the ordering.
+*/
+const MAX_PASSES = 3;
 /** Schema to parse the frontmatter in single content node mode. */
 const ContentSchema = object({ content: looseObject({
 	$path: string$7(),
@@ -64955,13 +64961,14 @@ try {
 	const editRef = import_github.context.payload.repository.default_branch ?? import_github.context.ref.replace(/^refs\/(heads|tags)\//, "");
 	const files = fs$1.globSync(glob).sort();
 	import_core.info(`Found ${files.length} markdown files from glob: "${glob}".`);
-	for (const file of files) try {
+	/** Pushes one markdown file to the Academy. Throws on failure. */
+	const processFile = async (file) => {
 		const input = await read(file, { encoding: "utf8" });
 		input.data.url = `https://raw.githubusercontent.com/${import_github.context.repo.owner}/${import_github.context.repo.repo}/${import_github.context.sha}/${file}`;
 		const output = await toMarkdown(input);
 		if (Object.keys(output.data.matter ?? {}).length === 0) {
 			import_core.info(`⏩ Skipped "${file}" because it has no frontmatter.`);
-			continue;
+			return;
 		}
 		const html$8 = `<!-- Pushed at ${(/* @__PURE__ */ new Date()).toISOString()} from https://github.com/${import_github.context.repo.owner}/${import_github.context.repo.repo}/blob/${import_github.context.sha}/${file} -->\n${output}`;
 		const frontmatter$1 = FrontmatterSchema.parse(output.data.matter);
@@ -64978,22 +64985,22 @@ try {
 			});
 			await retry(async () => {
 				const response = await client.query(t(`
-                  query ($path: String!, $language: String!) {
-                    jcr {
-                      nodeByPath(path: $path) {
-                        renderedContent(
-                          contextConfiguration: "gwt"
-                          isEditMode: true
-                          language: $language
-                          view: "default"
-                          templateType: "html"
-                        ) {
-                          output
-                        }
+                query ($path: String!, $language: String!) {
+                  jcr {
+                    nodeByPath(path: $path) {
+                      renderedContent(
+                        contextConfiguration: "gwt"
+                        isEditMode: true
+                        language: $language
+                        view: "default"
+                        templateType: "html"
+                      ) {
+                        output
                       }
                     }
                   }
-                `), {
+                }
+              `), {
 					path: $path$1,
 					language
 				});
@@ -65044,11 +65051,28 @@ try {
 			});
 		}
 		import_core.info(`✅ Successfully processed "${file}".`);
-	} catch (error$2) {
-		import_core.startGroup(`❌ Failed to process "${file}".`);
-		import_core.error(inspect(error$2));
-		import_core.endGroup();
+	};
+	let pending = files;
+	for (let pass = 1; pass <= MAX_PASSES && pending.length > 0; pass++) {
+		if (pass > 1) import_core.info(`🔁 Pass ${pass}/${MAX_PASSES}: retrying ${pending.length} file(s) that failed the previous pass.`);
+		const failed = [];
+		for (const file of pending) try {
+			await processFile(file);
+		} catch (error$2) {
+			failed.push(file);
+			if (pass < MAX_PASSES) {
+				import_core.startGroup(`⚠️ Failed to process "${file}" on pass ${pass}/${MAX_PASSES}, will retry.`);
+				import_core.info(inspect(error$2));
+			} else {
+				import_core.startGroup(`❌ Failed to process "${file}" after ${MAX_PASSES} passes, giving up.`);
+				import_core.error(inspect(error$2));
+			}
+			import_core.endGroup();
+		}
+		pending = failed;
 	}
+	if (pending.length > 0) import_core.error(`❌ ${pending.length} of ${files.length} file(s) could not be processed after ${MAX_PASSES} passes: ${pending.map((file) => `"${file}"`).join(", ")}.`);
+	else import_core.info(`🏁 All ${files.length} file(s) processed successfully.`);
 } catch (error$2) {
 	import_core.setFailed(error$2.message);
 }
