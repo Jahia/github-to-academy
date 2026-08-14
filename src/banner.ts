@@ -1,11 +1,5 @@
 import * as github from '@actions/github';
 
-/**
- * Name of the banner node created inside pages when the `github-banner` input
- * is enabled.
- */
-export const GITHUB_BANNER_NODE_NAME = 'github-banner';
-
 export const githubBannerHtml = (file: string) => {
   const { owner, repo } = github.context.repo;
   const { sha } = github.context;

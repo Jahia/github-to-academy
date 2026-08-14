@@ -8,8 +8,10 @@ import { inspect } from 'node:util';
 import { read } from 'to-vfile';
 import * as z from 'zod';
 import { deleteIfTypeDiffers, ensureFirstChild, upsertNode } from './api.ts';
-import { GITHUB_BANNER_NODE_NAME, githubBannerHtml } from './banner.ts';
+import { githubBannerHtml } from './banner.ts';
 import { toMarkdown } from './markdown.ts';
+
+const GITHUB_BANNER_NODE_NAME = 'github-banner';
 
 const defaultPublish = core.getInput('publish') !== 'false';
 const defaultLanguage = core.getInput('language') || 'en';
