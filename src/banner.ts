@@ -1,30 +1,22 @@
+import * as github from '@actions/github';
+
 /**
  * Name of the banner node created inside pages when the `github-banner` input
- * is enabled. Also used to check its position on pages that already exist.
+ * is enabled.
  */
 export const GITHUB_BANNER_NODE_NAME = 'github-banner';
 
-/**
- * HTML content of the banner node: an informational alert telling editors that
- * the content is managed on GitHub, with a link to the source markdown file.
- */
-export const githubBannerHtml = ({
-  owner,
-  repo,
-  ref,
-  file,
-  sha,
-  date,
-}: {
-  owner: string;
-  repo: string;
-  ref: string;
-  file: string;
-  /** Full SHA of the commit that triggered the push. */
-  sha: string;
-  /** Date of the push, e.g. "2026-08-05". */
-  date: string;
-}) => {
+export const githubBannerHtml = (file: string) => {
+  const { owner, repo } = github.context.repo;
+  const { sha } = github.context;
+  const date = new Date().toISOString().slice(0, 10);
+
+  // Link to the branch where edits happen (the default branch), not to the
+  // immutable commit being pushed
+  const ref =
+    (github.context.payload.repository?.default_branch as string | undefined) ??
+    github.context.ref.replace(/^refs\/(heads|tags)\//, '');
+
   const repoUrl = `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
   const fileUrl = `${repoUrl}/blob/${encodePath(ref)}/${encodePath(file)}`;
   const commitUrl = `${repoUrl}/commit/${encodeURIComponent(sha)}`;

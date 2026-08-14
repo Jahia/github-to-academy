@@ -125,13 +125,7 @@ export const upsertNode = async (
   }
 };
 
-/**
- * Deletes the node at `path` when it exists with a primary type other than
- * `type`, so it can be re-created with the right type by a following
- * `upsertNode` (which asserts on type mismatches instead). Only use this for
- * nodes fully owned by the action (e.g. the github-banner node), where
- * dropping and re-creating is always safe.
- */
+/** Deletes the node at `path` when it exists with a primary type other than `type`. */
 export const deleteIfTypeDiffers = async (
   client: Client,
   { path, type }: { path: string; type: string }
