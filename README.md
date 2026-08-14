@@ -97,8 +97,48 @@ language: fr
 
 # Enforce or prevent publication for individual pages
 publish: false
+
+# Enforce or prevent the GitHub banner for individual pages (see below)
+githubBanner: false
 ---
 ```
+
+### Pointing editors back to GitHub
+
+Content pushed by this action should be edited on GitHub, not in Jahia — manual edits are
+overwritten by the next push. To make that visible to editors, the action maintains a banner on
+every page it pushes. This is on by default; set the `github-banner` input to `'false'` to turn
+it off:
+
+```yaml
+- uses: Jahia/github-to-academy@v1
+  with:
+    files: docs/**/*.md
+    graphql-endpoint: ${{ secrets.ACADEMY_ENDPOINT }}
+    graphql-authorization: ${{ secrets.ACADEMY_AUTHORIZATION }}
+    github-banner: 'false'
+```
+
+When enabled, for every document whose page is of type `jnt:page`, the action creates a
+`jnt:bigText` node named `github-banner` next to the content node, containing an alert that
+links to the source markdown file on the repository's default branch (`jnt:bigText` because
+its `text` property is a richtext, so the alert markup is rendered instead of escaped):
+
+```html
+<div class="alert alert-info">
+    This content is managed on GitHub and pushed to the Academy automatically: ... <a href="...">...</a> ...
+</div>
+```
+
+Whether the page is new or already existed, the action also ensures the `github-banner`
+node is the **first** child there, so the alert shows up above the content.
+
+The banner node is created with `j:workInProgressStatus: ALL_CONTENT` (Work In Progress),
+so Jahia never publishes it: it is only visible to editors, never on the live site. Removing
+the Work In Progress status by hand would expose the banner on the next publication — don't.
+
+The flag can be overridden for one specific document with the `githubBanner` top-level
+frontmatter property.
 
 ### Additional markdown transformations
 
