@@ -35,3 +35,12 @@ inputs:
     description: 'Language of the content being pushed. Defaults to "en".'
     required: false
     default: 'en'
+
+  github-banner:
+    description:
+      'When "true", every page of type "jnt:page" created/updated by this action also gets a
+      "github-banner" node (type "jnt:bigText") as its first content: an informational alert telling
+      editors that the content is managed on GitHub, with a link to the source markdown file. The
+      node is kept Work In Progress so it is never published to the live site. Defaults to "true".'
+    required: false
+    default: 'true'
