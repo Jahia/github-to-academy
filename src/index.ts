@@ -77,6 +77,12 @@ try {
 
   core.info(`Found ${files.length} markdown files from glob: "${glob}".`);
 
+  // A file that cannot be pushed must fail the job. Every file is still
+  // attempted, so one bad document does not hide the state of the others.
+  const failures: string[] = [];
+  let pushed = 0;
+  let skipped = 0;
+
   for (const file of files) {
     try {
       const input = await read(file, { encoding: 'utf8' });
@@ -88,6 +94,7 @@ try {
 
       if (Object.keys(output.data.matter ?? {}).length === 0) {
         core.info(`⏩ Skipped "${file}" because it has no frontmatter.`);
+        skipped++;
         continue;
       }
 
@@ -185,12 +192,27 @@ try {
       }
 
       core.info(`✅ Successfully processed "${file}".`);
+      pushed++;
     } catch (error) {
       core.startGroup(`❌ Failed to process "${file}".`);
       core.error(inspect(error));
       core.endGroup();
+      failures.push(file);
     }
   }
+
+  core.info(
+    `Processed ${files.length} markdown files: ${pushed} pushed, ` +
+      `${skipped} skipped, ${failures.length} failed.`
+  );
+
+  // core.error only writes an annotation; without this the job would be green
+  // while nothing reached the Academy
+  if (failures.length > 0)
+    core.setFailed(
+      `${failures.length} of ${files.length} markdown files could not be pushed ` +
+        `to the Academy: ${failures.join(', ')}. See the grouped errors above.`
+    );
 } catch (error) {
   core.setFailed((error as Error).message);
 }
