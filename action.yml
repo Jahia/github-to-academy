@@ -14,7 +14,10 @@ runs:
 inputs:
   # Mandatory parameters, not available for overriding in markdown frontmatter
   files:
-    description: 'Glob pattern to find markdown files. Recommended: "docs/**/*.md".'
+    description:
+      'Glob pattern to find markdown files. Recommended: "docs/**/*.md". Accepts several patterns,
+      one per line - pass the files a push actually changed to avoid rewriting every document on
+      every run. Paths are matched as globs, so a literal file path works too.'
     required: true
 
   graphql-endpoint:

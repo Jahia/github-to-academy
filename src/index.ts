@@ -55,7 +55,13 @@ const FrontmatterSchema = z
 
 try {
   // Retrieve input params
-  const glob = core.getInput('files', { required: true });
+  // One glob per line, so a workflow can pass just the files a push actually
+  // changed instead of re-pushing every document on every run.
+  const patterns = core
+    .getInput('files', { required: true })
+    .split('\n')
+    .map((pattern) => pattern.trim())
+    .filter(Boolean);
   const graphqlEndpoint = new URL(core.getInput('graphql-endpoint', { required: true }));
   const graphqlAuthorization = core.getInput('graphql-authorization', { required: true });
 
@@ -73,9 +79,15 @@ try {
     },
   });
 
-  const files = fs.globSync(glob).sort();
+  // Patterns may overlap, and a file pushed twice in one run would be a wasted
+  // write and a confusing count
+  const files = [...new Set(fs.globSync(patterns))].sort();
 
-  core.info(`Found ${files.length} markdown files from glob: "${glob}".`);
+  core.info(
+    `Found ${files.length} markdown files from ${
+      patterns.length === 1 ? `glob: "${patterns[0]}"` : `${patterns.length} patterns`
+    }.`
+  );
 
   // A file that cannot be pushed must fail the job. Every file is still
   // attempted, so one bad document does not hide the state of the others.
