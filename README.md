@@ -44,6 +44,9 @@ content:
   $path: /sites/academy/home/...
   # Type of the node, defaults to "jacademy:textContent"
   $type: jnt:bigText
+  # Mixins to apply to the node, optional. Applied before the properties are
+  # set, so a property a mixin defines can be set in the same push.
+  $mixins: ['jmix:keywords']
   # The name of the prop that holds the HTML content,
   # defaults to "textContent" if unset, mandatory for custom node types
   $body: text
@@ -87,6 +90,57 @@ content:
 
 I'm a happy markdown document!
 ```
+
+### Property types
+
+Properties are mapped onto a JCR type from the value written in the frontmatter:
+
+| Frontmatter | JCR type |
+| --- | --- |
+| `a string` | `STRING` |
+| `true` / `false` | `BOOLEAN` |
+| `!!timestamp 2026-10-01` | `DATE` |
+| `['a', 'b']` | multivalued, type taken from the elements |
+
+A **bare number is rejected**, because YAML parses it before this action sees it:
+`0123` arrives as `123`, `0x1F` as `31`, `1.10` as `1.1`, and a long id loses
+precision. The text that was written is already gone, so storing it would mean
+storing a different value than the file shows. Quote it to keep it as written,
+or use the explicit form below to store a real number.
+
+An **unquoted ISO-8601 timestamp is a string**, not a date: YAML 1.2 has no
+implicit timestamp type. Use `!!timestamp`, or the explicit form.
+
+Some JCR types cannot be told apart from a string - a weakreference is only a
+path or a uuid, and so are `NAME`, `PATH` and `URI`. Set those explicitly:
+
+```yaml
+content:
+  $path: /sites/academy/contents/...
+  $type: jacademy:kbEntry
+  $mixins: ['jacademix:metadatas']
+  # A weakreference is resolved from either a path or a uuid
+  products:
+    type: WEAKREFERENCE
+    values:
+      - /sites/systemsite/categories/products/jahia
+  lastUpdated:
+    type: DATE
+    value: 2026-10-01T00:00:00.000Z
+  rating:
+    type: LONG
+    value: 42
+```
+
+`type` accepts any value of the `JCRPropertyType` enum, and the optional
+`option` any value of `JCRPropertyOption` (currently only `ENCRYPTED`). Exactly
+one of `value` or `values` is required.
+
+A multivalued property has a single type, so an array that mixes value types is
+rejected rather than silently coerced. Use the explicit form to choose the type.
+
+Mixins are only ever **added**. Removing one from `$mixins` leaves it on the
+node, since dropping a mixin would delete the properties it defines.
 
 Other top-level properties can be set in the frontmatter to override default values for one specific document:
 

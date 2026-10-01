@@ -24,6 +24,7 @@ const ContentSchema = z.object({
     // We could make the schema "smarter" at the expense of complexity
     // Let's keep it dumb for now
     $type: z.string().default('jacademy:textContent'),
+    $mixins: z.array(z.string()).default([]),
     $body: z.string().default('textContent'),
   }),
 });
@@ -33,10 +34,12 @@ const PageAndContentSchema = z.object({
   page: z.looseObject({
     $path: z.string(),
     $type: z.string().default('jnt:page'),
+    $mixins: z.array(z.string()).default([]),
   }),
   content: z.looseObject({
     $subpath: z.string(),
     $type: z.string().default('jacademy:textContent'),
+    $mixins: z.array(z.string()).default([]),
     $body: z.string().default('textContent'),
   }),
 });
@@ -97,9 +100,16 @@ try {
 
       // If `page` is defined, we need to create/update the page first
       if ('page' in frontmatter) {
-        const { $path, $type, ...properties } = frontmatter.page;
+        const { $path, $type, $mixins, ...properties } = frontmatter.page;
 
-        await upsertNode(client, { path: $path, type: $type, properties, language, publish });
+        await upsertNode(client, {
+          path: $path,
+          type: $type,
+          mixins: $mixins,
+          properties,
+          language,
+          publish,
+        });
 
         // Render the page in edit mode to trigger area creation
         const response = await client.query(
@@ -133,12 +143,13 @@ try {
           ? resolve(frontmatter.page.$path, frontmatter.content.$subpath)
           : frontmatter.content.$path;
 
-      const { $path, $subpath, $type, $body, ...properties } = content;
+      const { $path, $subpath, $type, $mixins, $body, ...properties } = content;
 
       // Update or create the content node
       await upsertNode(client, {
         path,
         type: $type,
+        mixins: $mixins,
         properties: { ...properties, [$body]: html },
         publish,
         language,
