@@ -65071,7 +65071,7 @@ try {
 		}
 		pending = failed;
 	}
-	if (pending.length > 0) import_core.error(`❌ ${pending.length} of ${files.length} file(s) could not be processed after ${MAX_PASSES} passes: ${pending.map((file) => `"${file}"`).join(", ")}.`);
+	if (pending.length > 0) import_core.setFailed(`❌ ${pending.length} of ${files.length} file(s) could not be processed after ${MAX_PASSES} passes: ${pending.map((file) => `"${file}"`).join(", ")}.`);
 	else import_core.info(`🏁 All ${files.length} file(s) processed successfully.`);
 } catch (error$2) {
 	import_core.setFailed(error$2.message);

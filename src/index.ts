@@ -196,7 +196,10 @@ try {
   }
 
   if (pending.length > 0) {
-    core.error(
+    // setFailed, not error: core.error only writes an annotation and returns,
+    // so the job stayed green while nothing reached the Academy. Every pass
+    // has already run at this point, so failing here hides no other result.
+    core.setFailed(
       `❌ ${pending.length} of ${files.length} file(s) could not be processed after ${MAX_PASSES} passes: ${pending
         .map((file) => `"${file}"`)
         .join(', ')}.`
