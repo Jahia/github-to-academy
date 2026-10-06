@@ -74,6 +74,8 @@ try {
   const client = new Client({
     url: graphqlEndpoint.toString(),
     exchanges: [fetchExchange],
+    // urql sends queries as GET by default; Jahia expects every request as POST
+    preferGetMethod: false,
     fetchOptions: {
       headers,
     },
