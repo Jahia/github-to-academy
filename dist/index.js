@@ -25449,12 +25449,15 @@ const pendingNodes = (nodes) => nodes.filter(({ status }) => status !== "PUBLISH
 */
 const isUnpublished = ({ nodes }) => nodes !== void 0 && pendingNodes(nodes.filter(({ role }) => role === "content")).length > 0;
 /**
-* The log line of a pushed file, a single line: a note when the content is
-* not live or its status is unknown, then the jContent link.
+* The log line of a pushed file, a single line, with a note when the content
+* is not live or its status is unknown. The jContent link is in the status
+* table only: a log shows a URL in full, which is too long for this line.
 */
 const processedLine = (status) => {
-	const notes = [status.error !== void 0 ? UNKNOWN_NOTE : isUnpublished(status) ? UNPUBLISHED_NOTE : "", status.link ? `🔗 ${status.link}` : ""].filter(Boolean);
-	return [`✅ Successfully processed "${status.file}"`, ...notes].join(" - ");
+	const line = `✅ Successfully processed "${status.file}"`;
+	if (status.error !== void 0) return `${line} - ${UNKNOWN_NOTE}`;
+	if (isUnpublished(status)) return `${line} - ${UNPUBLISHED_NOTE}`;
+	return line;
 };
 /**
 * The publication status of every pushed file, as the lines of a text table
