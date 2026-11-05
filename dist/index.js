@@ -25433,7 +25433,7 @@ const jcontentLink = (path$7, language) => {
 	return `${EDIT_HOST}/jahia/jcontent/${site}/${language}/pages/${rest.join("")}`;
 };
 /** Ends the log line of a pushed file whose content the live site does not show yet. */
-const UNPUBLISHED_NOTE = "📝 Unpublished content";
+const UNPUBLISHED_NOTE = "📝 Needs publishing in the Academy";
 /** Ends the log line of a pushed file whose publication status could not be read. */
 const UNKNOWN_NOTE = "❔ Publication status unknown";
 /**
@@ -25454,7 +25454,7 @@ const isUnpublished = ({ nodes }) => nodes !== void 0 && pendingNodes(nodes.filt
 * table only: a log shows a URL in full, which is too long for this line.
 */
 const processedLine = (status) => {
-	const line = `✅ Successfully processed "${status.file}"`;
+	const line = `✅ Pushed "${status.file}"`;
 	if (status.error !== void 0) return `${line} - ${UNKNOWN_NOTE}`;
 	if (isUnpublished(status)) return `${line} - ${UNPUBLISHED_NOTE}`;
 	return line;
@@ -25485,7 +25485,7 @@ const statusTable = (files) => {
 			if (value$2 === void 0) return status.error ? "?" : "-";
 			return value$2 === "PUBLISHED" ? `${PUBLISHED_MARK} ${value$2}` : value$2;
 		};
-		const live = status.error !== void 0 ? `unknown: ${status.error}` : isUnpublished(status) ? "unpublished content" : "up to date";
+		const live = status.error !== void 0 ? `unknown: ${status.error}` : isUnpublished(status) ? "needs publishing" : "live";
 		return [
 			status.file,
 			status.language,
@@ -65281,7 +65281,7 @@ try {
 	}
 	if (publicationStatuses.length > 0) {
 		const unpublished = publicationStatuses.filter(isUnpublished).length;
-		import_core.info(`📝 ${unpublished} of ${publicationStatuses.length} pushed file(s) have unpublished content.`);
+		import_core.info(`📝 ${unpublished} of ${publicationStatuses.length} pushed file(s) need publishing in the Academy.`);
 		import_core.startGroup(`📋 Publication status of the ${publicationStatuses.length} pushed file(s)`);
 		for (const line of statusTable(publicationStatuses)) import_core.info(line);
 		import_core.endGroup();
