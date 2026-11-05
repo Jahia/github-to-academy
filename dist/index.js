@@ -25459,6 +25459,13 @@ const processedLine = (status) => {
 	if (isUnpublished(status)) return `${line} - ${UNPUBLISHED_NOTE}`;
 	return line;
 };
+/** Marks a PUBLISHED status in the status table, and only that status. */
+const PUBLISHED_MARK = "✅";
+/**
+* The number of columns a cell takes in a log: the mark is one character
+* that a log shows two columns wide.
+*/
+const displayWidth = (text$8) => text$8.length + text$8.split(PUBLISHED_MARK).length - 1;
 /**
 * The publication status of every pushed file, as the lines of a text table
 * with aligned columns.
@@ -25473,7 +25480,11 @@ const statusTable = (files) => {
 		"Link"
 	];
 	const rows = files.map((status) => {
-		const of = (role) => status.nodes?.find((node$1) => node$1.role === role)?.status ?? (status.error ? "?" : "-");
+		const of = (role) => {
+			const value$2 = status.nodes?.find((node$1) => node$1.role === role)?.status;
+			if (value$2 === void 0) return status.error ? "?" : "-";
+			return value$2 === "PUBLISHED" ? `${PUBLISHED_MARK} ${value$2}` : value$2;
+		};
 		const live = status.error !== void 0 ? `unknown: ${status.error}` : isUnpublished(status) ? "unpublished content" : "up to date";
 		return [
 			status.file,
@@ -25484,8 +25495,8 @@ const statusTable = (files) => {
 			status.link
 		];
 	});
-	const widths = header.map((title, column) => Math.max(title.length, ...rows.map((row) => row[column].length)));
-	const line = (cells$1) => cells$1.map((cell, column) => cell.padEnd(widths[column])).join(" | ").trimEnd();
+	const widths = header.map((title, column) => Math.max(displayWidth(title), ...rows.map((row) => displayWidth(row[column]))));
+	const line = (cells$1) => cells$1.map((cell, column) => cell + " ".repeat(widths[column] - displayWidth(cell))).join(" | ").trimEnd();
 	return [
 		line(header),
 		widths.map((width) => "-".repeat(width)).join("-|-"),
