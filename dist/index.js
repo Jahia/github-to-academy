@@ -25421,6 +25421,17 @@ function superRefine(fn) {
 * form the action never sent.
 */
 const fingerprint = (values) => createHash("sha256").update(JSON.stringify(Object.entries(values).sort(([a$2], [b]) => a$2 < b ? -1 : a$2 > b ? 1 : 0))).digest("hex");
+/** Host of the Academy edit server, where editors open a page in jContent. */
+const EDIT_HOST = "https://edit.jahia.com";
+/**
+* The jContent URL of a node: `/sites/academy/home/a/b` in `en` opens at
+* `https://edit.jahia.com/jahia/jcontent/academy/en/pages/home/a/b`.
+*/
+const jcontentLink = (path$7, language) => {
+	const [, site, ...rest] = path$7.match(/^\/sites\/([^/]+)\/(.*)$/) ?? [];
+	if (!site) return "";
+	return `${EDIT_HOST}/jahia/jcontent/${site}/${language}/pages/${rest.join("")}`;
+};
 /** Ends the log line of a pushed file whose content the live site does not show yet. */
 const UNPUBLISHED_NOTE = "📝 Unpublished content";
 /** Ends the log line of a pushed file whose publication status could not be read. */
@@ -25431,13 +25442,19 @@ const UNKNOWN_NOTE = "❔ Publication status unknown";
 * unpublished node (UNPUBLISHED), and so on.
 */
 const pendingNodes = (nodes) => nodes.filter(({ status }) => status !== "PUBLISHED");
-const isUnpublished = ({ nodes }) => nodes !== void 0 && pendingNodes(nodes).length > 0;
-/** The log line of a pushed file: one line, with a note when there is something to know. */
+/**
+* True when the live site does not show the content of the document. Only
+* the content node counts: its page can hold other content, which the action
+* does not manage.
+*/
+const isUnpublished = ({ nodes }) => nodes !== void 0 && pendingNodes(nodes.filter(({ role }) => role === "content")).length > 0;
+/**
+* The log line of a pushed file, a single line: a note when the content is
+* not live or its status is unknown, then the jContent link.
+*/
 const processedLine = (status) => {
-	const line = `✅ Successfully processed "${status.file}"`;
-	if (status.error !== void 0) return `${line} - ${UNKNOWN_NOTE}`;
-	if (isUnpublished(status)) return `${line} - ${UNPUBLISHED_NOTE}`;
-	return `${line}.`;
+	const notes = [status.error !== void 0 ? UNKNOWN_NOTE : isUnpublished(status) ? UNPUBLISHED_NOTE : "", status.link ? `🔗 ${status.link}` : ""].filter(Boolean);
+	return [`✅ Successfully processed "${status.file}"`, ...notes].join(" - ");
 };
 /**
 * The publication status of every pushed file, as the lines of a text table
@@ -25447,21 +25464,25 @@ const statusTable = (files) => {
 	const header = [
 		"File",
 		"Language",
+		"Page",
 		"Content",
-		"Live site"
+		"Live site",
+		"Link"
 	];
 	const rows = files.map((status) => {
-		const content$2 = status.nodes?.map((node$1) => node$1.status).join(", ") ?? "?";
+		const of = (role) => status.nodes?.find((node$1) => node$1.role === role)?.status ?? (status.error ? "?" : "-");
 		const live = status.error !== void 0 ? `unknown: ${status.error}` : isUnpublished(status) ? "unpublished content" : "up to date";
 		return [
 			status.file,
 			status.language,
-			content$2,
-			live
+			of("page"),
+			of("content"),
+			live,
+			status.link
 		];
 	});
 	const widths = header.map((title, column) => Math.max(title.length, ...rows.map((row) => row[column].length)));
-	const line = (cells$1) => cells$1.map((cell, column) => column === cells$1.length - 1 ? cell : cell.padEnd(widths[column])).join(" | ");
+	const line = (cells$1) => cells$1.map((cell, column) => cell.padEnd(widths[column])).join(" | ").trimEnd();
 	return [
 		line(header),
 		widths.map((width) => "-".repeat(width)).join("-|-"),
@@ -65094,12 +65115,13 @@ try {
 	* file on one line, with a note when its content is not live yet. A failure
 	* to read a status does not fail the file: its content is already pushed.
 	*/
-	const reportPublication = async (file, nodes, language) => {
+	const reportPublication = async (file, nodes, language, link$2) => {
 		let status;
 		try {
 			status = {
 				file,
 				language,
+				link: link$2,
 				nodes: await Promise.all(nodes.map(async (node$1) => ({
 					...node$1,
 					status: await retry(() => getPublicationStatus(client, {
@@ -65112,6 +65134,7 @@ try {
 			status = {
 				file,
 				language,
+				link: link$2,
 				error: error$2.message
 			};
 		}
@@ -65211,11 +65234,13 @@ try {
 				name: GITHUB_BANNER_NODE_NAME
 			});
 		}
-		import_core.info(`✅ Successfully processed "${file}".`);
-		await reportPublication(file, [{
+		await reportPublication(file, [..."page" in frontmatter$1 ? [{
+			role: "page",
+			path: frontmatter$1.page.$path
+		}] : [], {
 			role: "content",
 			path: path$7
-		}], language);
+		}], language, jcontentLink("page" in frontmatter$1 ? frontmatter$1.page.$path : path$7, language));
 	};
 	let pending = files;
 	for (let pass = 1; pass <= MAX_PASSES && pending.length > 0; pass++) {
