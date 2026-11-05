@@ -136,17 +136,18 @@ and of its page, and logs the document on a single line. Whether the document is
 depends on its content node alone: the page can hold other content that the action does
 not manage.
 
-- `✅ Successfully processed "<file>"`: the live site shows the content.
-- `✅ Successfully processed "<file>" - 📝 Unpublished content`: the document needs a
-  publication.
-- `✅ Successfully processed "<file>" - ❔ Publication status unknown`: the action could
-  not read the status. The push itself succeeded.
+- `✅ Pushed "<file>"`: the push succeeded, and the live site shows the content.
+- `✅ Pushed "<file>" - 📝 Needs publishing in the Academy`: the push succeeded, and the
+  content is in the edit mode of the Academy, but not on the live site yet. Someone must
+  publish it in the Academy.
+- `✅ Pushed "<file>" - ❔ Publication status unknown`: the push succeeded, but the action
+  could not read the status.
 
 The link of the status table below opens the page in jContent on the Academy edit server:
 `https://edit.jahia.com/jahia/jcontent/<site>/<language>/pages/<path>`, where `<path>` is
 the JCR path of the page without `/sites/<site>/`, such as `home/documentation/…`.
 
-At the end of the run, the action logs how many documents have unpublished content, and
+At the end of the run, the action logs how many documents need publishing, and
 a collapsed group, "📋 Publication status of the pushed file(s)", with a table of every
 pushed file: its language, the status of its page and of its content, whether the live
 site is up to date, and the jContent link. A status is a value of the `PublicationStatus`

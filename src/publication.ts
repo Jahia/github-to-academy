@@ -44,7 +44,7 @@ export const jcontentLink = (path: string, language: string) => {
 };
 
 /** Ends the log line of a pushed file whose content the live site does not show yet. */
-export const UNPUBLISHED_NOTE = '📝 Unpublished content';
+export const UNPUBLISHED_NOTE = '📝 Needs publishing in the Academy';
 
 /** Ends the log line of a pushed file whose publication status could not be read. */
 export const UNKNOWN_NOTE = '❔ Publication status unknown';
@@ -71,7 +71,7 @@ export const isUnpublished = ({ nodes }: FileStatus) =>
  * table only: a log shows a URL in full, which is too long for this line.
  */
 export const processedLine = (status: FileStatus) => {
-  const line = `✅ Successfully processed "${status.file}"`;
+  const line = `✅ Pushed "${status.file}"`;
   if (status.error !== undefined) return `${line} - ${UNKNOWN_NOTE}`;
   if (isUnpublished(status)) return `${line} - ${UNPUBLISHED_NOTE}`;
   return line;
@@ -103,8 +103,8 @@ export const statusTable = (files: FileStatus[]): string[] => {
       status.error !== undefined
         ? `unknown: ${status.error}`
         : isUnpublished(status)
-          ? 'unpublished content'
-          : 'up to date';
+          ? 'needs publishing'
+          : 'live';
     return [status.file, status.language, of('page'), of('content'), live, status.link];
   });
 

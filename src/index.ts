@@ -262,7 +262,7 @@ try {
   if (publicationStatuses.length > 0) {
     const unpublished = publicationStatuses.filter(isUnpublished).length;
     core.info(
-      `📝 ${unpublished} of ${publicationStatuses.length} pushed file(s) have unpublished content.`
+      `📝 ${unpublished} of ${publicationStatuses.length} pushed file(s) need publishing in the Academy.`
     );
     // Collapsed in the log: the details are there for those who investigate
     core.startGroup(`📋 Publication status of the ${publicationStatuses.length} pushed file(s)`);

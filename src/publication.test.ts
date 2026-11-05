@@ -70,24 +70,24 @@ const PAGE_ONLY = {
 const UNKNOWN = { file: 'docs/b.md', language: 'fr', link: '', error: 'timeout' };
 
 test('the log line of a file is one line, with its note and no link', () => {
-  assert.equal(processedLine(PUBLISHED), '✅ Successfully processed "docs/a.md"');
+  assert.equal(processedLine(PUBLISHED), '✅ Pushed "docs/a.md"');
   assert.equal(
     processedLine(MODIFIED),
-    '✅ Successfully processed "docs/page.md" - 📝 Unpublished content'
+    '✅ Pushed "docs/page.md" - 📝 Needs publishing in the Academy'
   );
-  assert.equal(processedLine(UNKNOWN), '✅ Successfully processed "docs/b.md" - ❔ Publication status unknown');
+  assert.equal(processedLine(UNKNOWN), '✅ Pushed "docs/b.md" - ❔ Publication status unknown');
 });
 
 test('a modified page alone is not unpublished content', () => {
-  assert.equal(processedLine(PAGE_ONLY), '✅ Successfully processed "docs/other.md"');
+  assert.equal(processedLine(PAGE_ONLY), '✅ Pushed "docs/other.md"');
 });
 
 test('the status table aligns its columns', () => {
   assert.deepEqual(statusTable([PUBLISHED, MODIFIED, UNKNOWN]), [
-    'File         | Language | Page     | Content      | Live site           | Link',
-    '-------------|----------|----------|--------------|---------------------|-' + '-'.repeat(LINK.length),
-    'docs/a.md    | en       | -        | ✅ PUBLISHED | up to date          |',
-    `docs/page.md | en       | MODIFIED | MODIFIED     | unpublished content | ${LINK}`,
-    'docs/b.md    | fr       | ?        | ?            | unknown: timeout    |',
+    'File         | Language | Page     | Content      | Live site        | Link',
+    '-------------|----------|----------|--------------|------------------|-' + '-'.repeat(LINK.length),
+    'docs/a.md    | en       | -        | ✅ PUBLISHED | live             |',
+    `docs/page.md | en       | MODIFIED | MODIFIED     | needs publishing | ${LINK}`,
+    'docs/b.md    | fr       | ?        | ?            | unknown: timeout |',
   ]);
 });
