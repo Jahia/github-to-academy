@@ -9,6 +9,7 @@ import { read } from 'to-vfile';
 import * as z from 'zod';
 import { deleteIfTypeDiffers, ensureFirstChild, upsertNode } from './api.ts';
 import { githubBannerHtml } from './banner.ts';
+import { isAcademyFrontmatter } from './frontmatter.ts';
 import { toMarkdown } from './markdown.ts';
 
 const GITHUB_BANNER_NODE_NAME = 'github-banner';
@@ -106,8 +107,8 @@ try {
 
       const output = await toMarkdown(input);
 
-      if (Object.keys(output.data.matter ?? {}).length === 0) {
-        core.info(`⏩ Skipped "${file}" because it has no frontmatter.`);
+      if (!isAcademyFrontmatter(output.data.matter)) {
+        core.info(`⏩ Skipped "${file}" because its frontmatter has no "content" or "page" block.`);
         skipped++;
         continue;
       }
