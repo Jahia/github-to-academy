@@ -25421,14 +25421,53 @@ function superRefine(fn) {
 * form the action never sent.
 */
 const fingerprint = (values) => createHash("sha256").update(JSON.stringify(Object.entries(values).sort(([a$2], [b]) => a$2 < b ? -1 : a$2 > b ? 1 : 0))).digest("hex");
+/** Ends the log line of a pushed file whose content the live site does not show yet. */
+const UNPUBLISHED_NOTE = "📝 Unpublished content";
+/** Ends the log line of a pushed file whose publication status could not be read. */
+const UNKNOWN_NOTE = "❔ Publication status unknown";
 /**
 * Every status other than PUBLISHED means the live site does not show what is
 * in the edit workspace: a new node (NOT_PUBLISHED), a change (MODIFIED), an
 * unpublished node (UNPUBLISHED), and so on.
 */
 const pendingNodes = (nodes) => nodes.filter(({ status }) => status !== "PUBLISHED");
-/** "page is NOT_PUBLISHED, content is MODIFIED" */
-const describePending = (nodes) => nodes.map(({ role, status }) => `${role} is ${status}`).join(", ");
+const isUnpublished = ({ nodes }) => nodes !== void 0 && pendingNodes(nodes).length > 0;
+/** The log line of a pushed file: one line, with a note when there is something to know. */
+const processedLine = (status) => {
+	const line = `✅ Successfully processed "${status.file}"`;
+	if (status.error !== void 0) return `${line} - ${UNKNOWN_NOTE}`;
+	if (isUnpublished(status)) return `${line} - ${UNPUBLISHED_NOTE}`;
+	return `${line}.`;
+};
+/**
+* The publication status of every pushed file, as the lines of a text table
+* with aligned columns.
+*/
+const statusTable = (files) => {
+	const header = [
+		"File",
+		"Language",
+		"Content",
+		"Live site"
+	];
+	const rows = files.map((status) => {
+		const content$2 = status.nodes?.map((node$1) => node$1.status).join(", ") ?? "?";
+		const live = status.error !== void 0 ? `unknown: ${status.error}` : isUnpublished(status) ? "unpublished content" : "up to date";
+		return [
+			status.file,
+			status.language,
+			content$2,
+			live
+		];
+	});
+	const widths = header.map((title, column) => Math.max(title.length, ...rows.map((row) => row[column].length)));
+	const line = (cells$1) => cells$1.map((cell, column) => column === cells$1.length - 1 ? cell : cell.padEnd(widths[column])).join(" | ");
+	return [
+		line(header),
+		widths.map((width) => "-".repeat(width)).join("-|-"),
+		...rows.map(line)
+	];
+};
 
 //#endregion
 //#region src/retry.ts
@@ -65048,35 +65087,36 @@ try {
 	const editRef = import_github.context.payload.repository.default_branch ?? import_github.context.ref.replace(/^refs\/(heads|tags)\//, "");
 	const files = fs$1.globSync(glob).sort();
 	import_core.info(`Found ${files.length} markdown files from glob: "${glob}".`);
-	/** Files pushed whose page or content node the live site does not show yet. */
-	const pendingPublication = [];
+	/** The publication status of every file pushed, in the order of the push. */
+	const publicationStatuses = [];
 	/**
-	* Reads the publication status of the nodes a file pushed, and logs whether
-	* the file waits for a publication. A failure to read a status is logged
-	* and does not fail the file: its content is already pushed.
+	* Reads the publication status of the nodes a file pushed, and logs the
+	* file on one line, with a note when its content is not live yet. A failure
+	* to read a status does not fail the file: its content is already pushed.
 	*/
 	const reportPublication = async (file, nodes, language) => {
-		let statuses;
+		let status;
 		try {
-			statuses = await Promise.all(nodes.map(async (node$1) => ({
-				...node$1,
-				status: await retry(() => getPublicationStatus(client, {
-					path: node$1.path,
-					language
-				}), { shouldRetry: isPathNotFound })
-			})));
+			status = {
+				file,
+				language,
+				nodes: await Promise.all(nodes.map(async (node$1) => ({
+					...node$1,
+					status: await retry(() => getPublicationStatus(client, {
+						path: node$1.path,
+						language
+					}), { shouldRetry: isPathNotFound })
+				})))
+			};
 		} catch (error$2) {
-			import_core.info(`✅ Successfully processed "${file}".`);
-			import_core.warning(`Could not read the publication status of "${file}": ${error$2.message}`);
-			return;
+			status = {
+				file,
+				language,
+				error: error$2.message
+			};
 		}
-		const pending$1 = pendingNodes(statuses);
-		if (pending$1.length === 0) {
-			import_core.info(`✅ Successfully processed "${file}", nothing to publish.`);
-			return;
-		}
-		pendingPublication.push(file);
-		import_core.info(`🟠 Successfully processed "${file}", pending publication (${language}): ${describePending(pending$1)}.`);
+		publicationStatuses.push(status);
+		import_core.info(processedLine(status));
 	};
 	/** Pushes one markdown file to the Academy. Throws on failure. */
 	const processFile = async (file) => {
@@ -65172,10 +65212,7 @@ try {
 			});
 		}
 		import_core.info(`✅ Successfully processed "${file}".`);
-		await reportPublication(file, [..."page" in frontmatter$1 ? [{
-			role: "page",
-			path: frontmatter$1.page.$path
-		}] : [], {
+		await reportPublication(file, [{
 			role: "content",
 			path: path$7
 		}], language);
@@ -65203,7 +65240,13 @@ try {
 		}
 		pending = failed;
 	}
-	if (pendingPublication.length > 0) import_core.info(`🟠 ${pendingPublication.length} of ${files.length} file(s) wait for a publication: ${pendingPublication.map((file) => `"${file}"`).join(", ")}.`);
+	if (publicationStatuses.length > 0) {
+		const unpublished = publicationStatuses.filter(isUnpublished).length;
+		import_core.info(`📝 ${unpublished} of ${publicationStatuses.length} pushed file(s) have unpublished content.`);
+		import_core.startGroup(`📋 Publication status of the ${publicationStatuses.length} pushed file(s)`);
+		for (const line of statusTable(publicationStatuses)) import_core.info(line);
+		import_core.endGroup();
+	}
 	if (pending.length > 0) import_core.setFailed(`❌ ${pending.length} of ${files.length} file(s) could not be processed after ${MAX_PASSES} passes: ${pending.map((file) => `"${file}"`).join(", ")}.`);
 	else import_core.info(`🏁 All ${files.length} file(s) processed successfully.`);
 } catch (error$2) {
