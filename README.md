@@ -123,6 +123,36 @@ flag can (and should) be removed afterwards.
 > the marker carry no marker either — their documents need one push with
 > `overwrite: true` to adopt them.
 
+### Unchanged documents and pending publication
+
+The action also stores a fingerprint of the values it pushes on each node, in a
+`githubToAcademyFingerprint_<language>` property. When a document has not changed since
+the last push, the action does not write its nodes again. A document that was published
+then stays published. The `Pushed at` comment at the top of the body is not part of the
+fingerprint, because it changes on every push.
+
+After it pushes a document, the action reads the publication status of its page and
+content nodes, and logs one of these lines:
+
+- `✅ Successfully processed "<file>", nothing to publish.`: the live site shows what
+  was pushed.
+- `🟠 Successfully processed "<file>", pending publication (en): content is MODIFIED.`:
+  the document needs a publication. The status is a value of the `PublicationStatus`
+  GraphQL enum, such as `NOT_PUBLISHED` for a new node or `MODIFIED` for a change.
+
+At the end of the run, the action lists every file that needs a publication.
+
+The first push after an upgrade to this version writes every document once more, to
+store its fingerprint.
+
+### Links to other Academy pages
+
+A link to an Academy page is the JCR path of the page followed by `.html`, such as
+`/sites/academy/home/documentation/jahia-cloud/latest/environment/upgrade-your-environment.html`.
+Jahia refuses a link to a path that it cannot resolve, and the push of the document fails
+with `Invalid link`. The action then logs a hint that names the link, and gives the
+corrected link when only `.html` is missing.
+
 ### Additional markdown transformations
 
 All standard markdown syntax is supported, [with some additional features added to better support the academy.](./src/markdown.ts)

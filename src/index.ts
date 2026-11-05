@@ -7,8 +7,10 @@ import { resolve } from 'node:path/posix';
 import { inspect } from 'node:util';
 import { read } from 'to-vfile';
 import * as z from 'zod';
-import { upsertNode } from './api.ts';
+import { getPublicationStatus, upsertNode } from './api.ts';
+import { invalidLinkHints } from './hints.ts';
 import { toMarkdown } from './markdown.ts';
+import { describePending, pendingNodes, type NodeStatus } from './publication.ts';
 import { isPathNotFound, retry } from './retry.ts';
 import { createStickyFetch } from './sticky-fetch.ts';
 
@@ -83,6 +85,47 @@ try {
   const files = fs.globSync(glob).sort();
 
   core.info(`Found ${files.length} markdown files from glob: "${glob}".`);
+
+  /** Files pushed whose page or content node the live site does not show yet. */
+  const pendingPublication: string[] = [];
+
+  /**
+   * Reads the publication status of the nodes a file pushed, and logs whether
+   * the file waits for a publication. A failure to read a status is logged
+   * and does not fail the file: its content is already pushed.
+   */
+  const reportPublication = async (
+    file: string,
+    nodes: Omit<NodeStatus, 'status'>[],
+    language: string
+  ) => {
+    let statuses: NodeStatus[];
+    try {
+      statuses = await Promise.all(
+        nodes.map(async (node) => ({
+          ...node,
+          status: await retry(() => getPublicationStatus(client, { path: node.path, language }), {
+            shouldRetry: isPathNotFound,
+          }),
+        }))
+      );
+    } catch (error) {
+      core.info(`✅ Successfully processed "${file}".`);
+      core.warning(`Could not read the publication status of "${file}": ${(error as Error).message}`);
+      return;
+    }
+
+    const pending = pendingNodes(statuses);
+    if (pending.length === 0) {
+      core.info(`✅ Successfully processed "${file}", nothing to publish.`);
+      return;
+    }
+
+    pendingPublication.push(file);
+    core.info(
+      `🟠 Successfully processed "${file}", pending publication (${language}): ${describePending(pending)}.`
+    );
+  };
 
   /** Pushes one markdown file to the Academy. Throws on failure. */
   const processFile = async (file: string): Promise<void> => {
@@ -159,9 +202,19 @@ try {
       publish,
       language,
       overwrite,
+      // The body starts with a stamp that changes on every push: leave it out,
+      // so an unchanged document is not rewritten
+      fingerprintOf: { ...properties, [$body]: String(output) },
     });
 
-    core.info(`✅ Successfully processed "${file}".`);
+    await reportPublication(
+      file,
+      [
+        ...('page' in frontmatter ? [{ role: 'page', path: frontmatter.page.$path }] : []),
+        { role: 'content', path },
+      ],
+      language
+    );
   };
 
   // Pass 1 processes every file; each following pass retries only the files
@@ -180,19 +233,33 @@ try {
         await processFile(file);
       } catch (error) {
         failed.push(file);
+        const hints = invalidLinkHints(error);
         if (pass < MAX_PASSES) {
           // Not an annotation (core.info): the retry may well succeed, e.g.
           // when the failure comes from a link to a page later in the batch
           core.startGroup(`⚠️ Failed to process "${file}" on pass ${pass}/${MAX_PASSES}, will retry.`);
+          for (const hint of hints) core.info(`💡 ${hint}`);
           core.info(inspect(error));
+          core.endGroup();
         } else {
           core.startGroup(`❌ Failed to process "${file}" after ${MAX_PASSES} passes, giving up.`);
           core.error(inspect(error));
+          core.endGroup();
+          // Outside the group, and as annotations on the file, so the hint is
+          // the first thing read in the log and in the run summary
+          for (const hint of hints) core.error(`💡 ${hint}`, { file });
         }
-        core.endGroup();
       }
     }
     pending = failed;
+  }
+
+  if (pendingPublication.length > 0) {
+    core.info(
+      `🟠 ${pendingPublication.length} of ${files.length} file(s) wait for a publication: ${pendingPublication
+        .map((file) => `"${file}"`)
+        .join(', ')}.`
+    );
   }
 
   if (pending.length > 0) {
