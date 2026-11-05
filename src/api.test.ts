@@ -5,7 +5,7 @@ import { print } from 'graphql';
 import { VFile } from 'vfile';
 import { matter } from 'vfile-matter';
 
-import { prepareProperties, upsertNode } from './api.ts';
+import { fingerprintProperty, prepareProperties, upsertNode } from './api.ts';
 
 /** Parses a frontmatter value the way the action really does, via vfile-matter. */
 const fromFrontmatter = (yaml: string) => {
@@ -148,7 +148,8 @@ test('creating a node passes the mixins to addNode', async () => {
 
   assert.equal(mutations.length, 1);
   assert.match(mutations[0].document, /addNode\([^)]*mixins: \$mixins/s);
-  assert.deepEqual(mutations[0].variables.mixins, ['jacademix:kbQa']);
+  // jmix:unstructured allows the fingerprint property on any node type
+  assert.deepEqual(mutations[0].variables.mixins, ['jacademix:kbQa', 'jmix:unstructured']);
 });
 
 test('updating a node adds the mixins before setting the properties', async () => {
@@ -164,8 +165,8 @@ test('updating a node adds the mixins before setting the properties', async () =
   });
 
   const { document, variables } = mutations[0];
-  assert.deepEqual(variables.mixins, ['jacademix:kbQa', 'jacademix:metadatas']);
-  assert.equal(variables.hasMixins, true);
+  assert.deepEqual(variables.mixins, ['jacademix:kbQa', 'jacademix:metadatas', 'jmix:unstructured']);
+  assert.equal(variables.write, true);
   // A mixin has to exist before a property it defines can be set, and only
   // root-level mutation fields are guaranteed to run in order
   assert.ok(
@@ -174,7 +175,7 @@ test('updating a node adds the mixins before setting the properties', async () =
   );
 });
 
-test('updating a node without mixins does not call addMixins', async () => {
+test('updating a node without mixins adds only jmix:unstructured', async () => {
   const { client, mutations } = fakeClient(FOUND);
 
   await upsertNode(client, {
@@ -185,7 +186,70 @@ test('updating a node without mixins does not call addMixins', async () => {
     publish: false,
   });
 
-  // Existing users set no mixins; they must not start depending on addMixins
-  assert.equal(mutations[0].variables.hasMixins, false);
-  assert.deepEqual(mutations[0].variables.mixins, []);
+  assert.deepEqual(mutations[0].variables.mixins, ['jmix:unstructured']);
+});
+
+/** The node as FOUND, carrying the fingerprint of an earlier push. */
+const foundWithFingerprint = async (push: Parameters<typeof upsertNode>[1]) => {
+  const first = fakeClient(NOT_FOUND);
+  await upsertNode(first.client, push);
+  const stored = (first.mutations[0].variables.properties as { name: string; value: string }[]).find(
+    ({ name }) => name === fingerprintProperty(push.language)
+  );
+  assert.ok(stored, 'the creation stores the fingerprint');
+  return {
+    data: {
+      jcr: {
+        nodeByPath: {
+          primaryNodeType: { name: push.type },
+          fingerprint: { value: stored.value },
+        },
+      },
+    },
+  };
+};
+
+const PUSH = {
+  path: PATH,
+  type: 'jacademy:kbEntry',
+  mixins: ['jacademix:kbQa'],
+  properties: { 'jcr:title': 'Title', textContent: '<!-- Pushed at 1 -->\n<p>Body</p>' },
+  fingerprintOf: { 'jcr:title': 'Title', textContent: '<p>Body</p>' },
+  language: 'en',
+  publish: false,
+};
+
+test('a re-push of an unchanged document writes nothing', async () => {
+  const { client, mutations } = fakeClient(await foundWithFingerprint(PUSH));
+
+  // Only the stamp differs, and the stamp is not part of the fingerprint
+  await upsertNode(client, {
+    ...PUSH,
+    properties: { ...PUSH.properties, textContent: '<!-- Pushed at 2 -->\n<p>Body</p>' },
+  });
+
+  assert.equal(mutations.length, 0);
+});
+
+test('a re-push of an unchanged document with publish: true only publishes', async () => {
+  const { client, mutations } = fakeClient(await foundWithFingerprint({ ...PUSH, publish: true }));
+
+  await upsertNode(client, { ...PUSH, publish: true });
+
+  assert.equal(mutations.length, 1);
+  assert.equal(mutations[0].variables.write, false);
+  assert.equal(mutations[0].variables.publish, true);
+});
+
+test('a changed value or mixin writes the node again', async () => {
+  const stored = await foundWithFingerprint(PUSH);
+
+  for (const push of [
+    { ...PUSH, fingerprintOf: { ...PUSH.fingerprintOf, textContent: '<p>Changed</p>' } },
+    { ...PUSH, mixins: ['jacademix:kbQa', 'jacademix:metadatas'] },
+  ]) {
+    const { client, mutations } = fakeClient(stored);
+    await upsertNode(client, push);
+    assert.equal(mutations[0].variables.write, true);
+  }
 });

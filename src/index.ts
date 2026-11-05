@@ -7,9 +7,11 @@ import { resolve } from 'node:path/posix';
 import { inspect } from 'node:util';
 import { read } from 'to-vfile';
 import * as z from 'zod';
-import { deleteIfTypeDiffers, ensureFirstChild, upsertNode } from './api.ts';
+import { deleteIfTypeDiffers, ensureFirstChild, getPublicationStatus, upsertNode } from './api.ts';
 import { githubBannerHtml } from './banner.ts';
+import { invalidLinkHints } from './hints.ts';
 import { toMarkdown } from './markdown.ts';
+import { describePending, pendingNodes, type NodeStatus } from './publication.ts';
 
 const GITHUB_BANNER_NODE_NAME = 'github-banner';
 
@@ -96,6 +98,44 @@ try {
   const failures: string[] = [];
   let pushed = 0;
   let skipped = 0;
+  /** Files pushed whose page or content node the live site does not show yet. */
+  const pendingPublication: string[] = [];
+
+  /**
+   * Reads the publication status of the nodes a file pushed, and logs whether
+   * the file waits for a publication. A failure to read a status is logged
+   * and does not fail the file: its content is already pushed.
+   */
+  const reportPublication = async (
+    file: string,
+    nodes: Omit<NodeStatus, 'status'>[],
+    language: string
+  ) => {
+    let statuses: NodeStatus[];
+    try {
+      statuses = await Promise.all(
+        nodes.map(async (node) => ({
+          ...node,
+          status: await getPublicationStatus(client, { path: node.path, language }),
+        }))
+      );
+    } catch (error) {
+      core.info(`✅ Successfully processed "${file}".`);
+      core.warning(`Could not read the publication status of "${file}": ${(error as Error).message}`);
+      return;
+    }
+
+    const pending = pendingNodes(statuses);
+    if (pending.length === 0) {
+      core.info(`✅ Successfully processed "${file}", nothing to publish.`);
+      return;
+    }
+
+    pendingPublication.push(file);
+    core.info(
+      `🟠 Successfully processed "${file}", pending publication (${language}): ${describePending(pending)}.`
+    );
+  };
 
   for (const file of files) {
     try {
@@ -174,6 +214,9 @@ try {
         properties: { ...properties, [$body]: html },
         publish,
         language,
+        // The body starts with a stamp that changes on every push: leave it
+        // out, so an unchanged document is not rewritten
+        fingerprintOf: { ...properties, [$body]: String(output) },
       });
 
       // Optionally maintain the "github-banner" node as the first content of the
@@ -205,14 +248,32 @@ try {
         await ensureFirstChild(client, { parent: area, name: GITHUB_BANNER_NODE_NAME });
       }
 
-      core.info(`✅ Successfully processed "${file}".`);
+      await reportPublication(
+        file,
+        [
+          ...('page' in frontmatter ? [{ role: 'page', path: frontmatter.page.$path }] : []),
+          { role: 'content', path },
+        ],
+        language
+      );
       pushed++;
     } catch (error) {
       core.startGroup(`❌ Failed to process "${file}".`);
       core.error(inspect(error));
       core.endGroup();
+      // Outside the group, and as annotations on the file, so the hint is the
+      // first thing read in the log and in the run summary
+      for (const hint of invalidLinkHints(error)) core.error(`💡 ${hint}`, { file });
       failures.push(file);
     }
+  }
+
+  if (pendingPublication.length > 0) {
+    core.info(
+      `🟠 ${pendingPublication.length} of ${files.length} file(s) wait for a publication: ${pendingPublication
+        .map((file) => `"${file}"`)
+        .join(', ')}.`
+    );
   }
 
   core.info(
