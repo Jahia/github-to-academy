@@ -66,15 +66,15 @@ export const isUnpublished = ({ nodes }: FileStatus) =>
   nodes !== undefined && pendingNodes(nodes.filter(({ role }) => role === 'content')).length > 0;
 
 /**
- * The log line of a pushed file, a single line: a note when the content is
- * not live or its status is unknown, then the jContent link.
+ * The log line of a pushed file, a single line, with a note when the content
+ * is not live or its status is unknown. The jContent link is in the status
+ * table only: a log shows a URL in full, which is too long for this line.
  */
 export const processedLine = (status: FileStatus) => {
-  const notes = [
-    status.error !== undefined ? UNKNOWN_NOTE : isUnpublished(status) ? UNPUBLISHED_NOTE : '',
-    status.link ? `🔗 ${status.link}` : '',
-  ].filter(Boolean);
-  return [`✅ Successfully processed "${status.file}"`, ...notes].join(' - ');
+  const line = `✅ Successfully processed "${status.file}"`;
+  if (status.error !== undefined) return `${line} - ${UNKNOWN_NOTE}`;
+  if (isUnpublished(status)) return `${line} - ${UNPUBLISHED_NOTE}`;
+  return line;
 };
 
 /**

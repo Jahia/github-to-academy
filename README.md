@@ -136,13 +136,13 @@ and of its page, and logs the document on a single line. Whether the document is
 depends on its content node alone: the page can hold other content that the action does
 not manage.
 
-- `✅ Successfully processed "<file>" - 🔗 <link>`: the live site shows the content.
-- `✅ Successfully processed "<file>" - 📝 Unpublished content - 🔗 <link>`: the
-  document needs a publication.
-- `✅ Successfully processed "<file>" - ❔ Publication status unknown - 🔗 <link>`: the
-  action could not read the status. The push itself succeeded.
+- `✅ Successfully processed "<file>"`: the live site shows the content.
+- `✅ Successfully processed "<file>" - 📝 Unpublished content`: the document needs a
+  publication.
+- `✅ Successfully processed "<file>" - ❔ Publication status unknown`: the action could
+  not read the status. The push itself succeeded.
 
-The link opens the page in jContent on the Academy edit server:
+The link of the status table below opens the page in jContent on the Academy edit server:
 `https://edit.jahia.com/jahia/jcontent/<site>/<language>/pages/<path>`, where `<path>` is
 the JCR path of the page without `/sites/<site>/`, such as `home/documentation/…`.
 

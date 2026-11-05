@@ -69,17 +69,17 @@ const PAGE_ONLY = {
 };
 const UNKNOWN = { file: 'docs/b.md', language: 'fr', link: '', error: 'timeout' };
 
-test('the log line of a file is one line, with its note and its link', () => {
+test('the log line of a file is one line, with its note and no link', () => {
   assert.equal(processedLine(PUBLISHED), '✅ Successfully processed "docs/a.md"');
   assert.equal(
     processedLine(MODIFIED),
-    `✅ Successfully processed "docs/page.md" - 📝 Unpublished content - 🔗 ${LINK}`
+    '✅ Successfully processed "docs/page.md" - 📝 Unpublished content'
   );
   assert.equal(processedLine(UNKNOWN), '✅ Successfully processed "docs/b.md" - ❔ Publication status unknown');
 });
 
 test('a modified page alone is not unpublished content', () => {
-  assert.equal(processedLine(PAGE_ONLY), `✅ Successfully processed "docs/other.md" - 🔗 ${LINK}`);
+  assert.equal(processedLine(PAGE_ONLY), '✅ Successfully processed "docs/other.md"');
 });
 
 test('the status table aligns its columns', () => {
