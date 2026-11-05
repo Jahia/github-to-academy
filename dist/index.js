@@ -1,5 +1,6 @@
 import { createRequire } from "node:module";
 import { inspect } from "node:util";
+import { createHash } from "node:crypto";
 import * as fs$1 from "node:fs";
 import fs from "node:fs";
 import { basename, dirname, resolve } from "node:path/posix";
@@ -25412,6 +25413,24 @@ function superRefine(fn) {
 }
 
 //#endregion
+//#region src/publication.ts
+/**
+* A hash of the values the action pushes to a node. The next push compares
+* it with the hash stored on the node instead of the stored values, which
+* Jahia rewrites when it saves them: a richtext link, for one, is stored in a
+* form the action never sent.
+*/
+const fingerprint = (values) => createHash("sha256").update(JSON.stringify(Object.entries(values).sort(([a$2], [b]) => a$2 < b ? -1 : a$2 > b ? 1 : 0))).digest("hex");
+/**
+* Every status other than PUBLISHED means the live site does not show what is
+* in the edit workspace: a new node (NOT_PUBLISHED), a change (MODIFIED), an
+* unpublished node (UNPUBLISHED), and so on.
+*/
+const pendingNodes = (nodes) => nodes.filter(({ status }) => status !== "PUBLISHED");
+/** "page is NOT_PUBLISHED, content is MODIFIED" */
+const describePending = (nodes) => nodes.map(({ role, status }) => `${role} is ${status}`).join(", ");
+
+//#endregion
 //#region src/retry.ts
 /**
 * Retries `fn` until it succeeds, `shouldRetry` rejects the error, or
@@ -25446,10 +25465,21 @@ const isPathNotFound = (error$2) => error$2 instanceof Error && error$2.message.
 * it, updates are refused unless the document opts in with `overwrite: true`.
 */
 const MANAGED_MARKER = "githubToAcademyManaged";
+/**
+* Property, carried by jmix:unstructured too, that holds the fingerprint of
+* the values last pushed in a language. A push whose fingerprint matches it
+* writes nothing.
+*/
+const fingerprintProperty = (language) => `githubToAcademyFingerprint_${language}`;
 /** Inserts or updates a node. */
-const upsertNode = async (client, { path: path$7, type: type$1, properties: rawProperties, language, publish: publish$1, overwrite = false }) => {
+const upsertNode = async (client, { path: path$7, type: type$1, properties: rawProperties, language, publish: publish$1, overwrite = false, fingerprintOf = rawProperties }) => {
+	const pushed = fingerprint(fingerprintOf);
+	const stamps = {
+		[MANAGED_MARKER]: "true",
+		[fingerprintProperty(language)]: pushed
+	};
 	const { data, error: error$2 } = await client.query(t(`
-      query ($path: String!, $marker: String!, $language: String!) {
+      query ($path: String!, $marker: String!, $fingerprint: String!, $language: String!) {
         jcr {
           nodeByPath(path: $path) {
             primaryNodeType {
@@ -25458,12 +25488,16 @@ const upsertNode = async (client, { path: path$7, type: type$1, properties: rawP
             property(name: $marker, language: $language) {
               value
             }
+            fingerprint: property(name: $fingerprint, language: $language) {
+              value
+            }
           }
         }
       }
     `), {
 		path: path$7,
 		marker: MANAGED_MARKER,
+		fingerprint: fingerprintProperty(language),
 		language
 	});
 	if (error$2?.graphQLErrors.some(({ message }) => message.includes("PathNotFoundException"))) {
@@ -25501,7 +25535,7 @@ const upsertNode = async (client, { path: path$7, type: type$1, properties: rawP
 			type: type$1,
 			properties: prepareProperties({
 				...rawProperties,
-				[MANAGED_MARKER]: "true"
+				...stamps
 			}, language),
 			publish: publish$1,
 			language
@@ -25525,14 +25559,17 @@ const upsertNode = async (client, { path: path$7, type: type$1, properties: rawP
         `), { path: path$7 });
 			if (mixin.error) throw mixin.error;
 		}
+		const changed = !isManaged || data.jcr.nodeByPath.fingerprint?.value !== pushed;
+		if (!changed && !publish$1) return;
 		const { error: error$3 } = await client.mutation(t(`
         mutation (
           $path: String!
           $properties: [InputJCRProperty!]!
+          $write: Boolean!
           $publish: Boolean!
           $language: String!
         ) {
-          jcr {
+          jcr @include(if: $write) {
             mutateNode(pathOrId: $path) {
               setPropertiesBatch(properties: $properties) {
                 __typename
@@ -25547,15 +25584,42 @@ const upsertNode = async (client, { path: path$7, type: type$1, properties: rawP
         }
       `), {
 			path: path$7,
-			properties: prepareProperties(isManaged ? rawProperties : {
+			properties: prepareProperties({
 				...rawProperties,
-				[MANAGED_MARKER]: "true"
+				...stamps
 			}, language),
+			write: changed,
 			publish: publish$1,
 			language
 		});
 		if (error$3) throw error$3;
 	}
+};
+/**
+* The publication status of the node at `path` in `language`, a value of the
+* `PublicationStatus` GraphQL enum. Only the node itself counts, not its
+* children: the page of a document holds nodes the action keeps unpublished
+* on purpose, such as the GitHub banner.
+*/
+const getPublicationStatus = async (client, { path: path$7, language }) => {
+	const { data, error: error$2 } = await client.query(t(`
+      query ($path: String!, $language: String!) {
+        jcr {
+          nodeByPath(path: $path) {
+            aggregatedPublicationInfo(language: $language, subNodes: false, references: false) {
+              publicationStatus
+            }
+          }
+        }
+      }
+    `), {
+		path: path$7,
+		language
+	});
+	if (error$2) throw error$2;
+	const status = data?.jcr.nodeByPath?.aggregatedPublicationInfo.publicationStatus;
+	assert(status, `Node at path "${path$7}" has no publication status.`);
+	return status;
 };
 /**
 * Deletes the node at `path` when it exists with a primary type other than
@@ -25663,6 +25727,29 @@ const githubBannerHtml = ({ owner, repo, ref, file, sha, date: date$2 }) => {
 const escapeHtml = (value$2) => value$2.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("\"", "&quot;");
 /** URL-encodes a path (branch name, file path) segment by segment. */
 const encodePath = (path$7) => path$7.split("/").map(encodeURIComponent).join("/");
+
+//#endregion
+//#region src/hints.ts
+/**
+* Hints that explain an error Jahia returned in terms the author of the
+* markdown file can act on. Jahia only says what it refused, not why.
+*/
+/**
+* Jahia rejects a richtext that links to a path it cannot resolve with a
+* `GqlConstraintViolationException` whose message reads
+* `<node> Text: Invalid link<path>`, with no space before the path.
+*/
+const INVALID_LINK = /Invalid link\s*(\S+)/g;
+/** Hints for every invalid link named in `error`, without duplicates. */
+const invalidLinkHints = (error$2) => {
+	const message = error$2 instanceof Error ? error$2.message : String(error$2);
+	const links = new Set([...message.matchAll(INVALID_LINK)].map(([, link$2]) => link$2));
+	return [...links].map((link$2) => {
+		const lastSegment = link$2.split(/[?#]/)[0].split("/").pop() ?? "";
+		if (!lastSegment.includes(".")) return `Jahia refused the link "${link$2}". A link to an Academy page must end with ".html": write "${link$2}.html".`;
+		return `Jahia refused the link "${link$2}": nothing exists at this path. Check the path, or push the page it targets first.`;
+	});
+};
 
 //#endregion
 //#region node_modules/ccount/index.js
@@ -64961,6 +65048,36 @@ try {
 	const editRef = import_github.context.payload.repository.default_branch ?? import_github.context.ref.replace(/^refs\/(heads|tags)\//, "");
 	const files = fs$1.globSync(glob).sort();
 	import_core.info(`Found ${files.length} markdown files from glob: "${glob}".`);
+	/** Files pushed whose page or content node the live site does not show yet. */
+	const pendingPublication = [];
+	/**
+	* Reads the publication status of the nodes a file pushed, and logs whether
+	* the file waits for a publication. A failure to read a status is logged
+	* and does not fail the file: its content is already pushed.
+	*/
+	const reportPublication = async (file, nodes, language) => {
+		let statuses;
+		try {
+			statuses = await Promise.all(nodes.map(async (node$1) => ({
+				...node$1,
+				status: await retry(() => getPublicationStatus(client, {
+					path: node$1.path,
+					language
+				}), { shouldRetry: isPathNotFound })
+			})));
+		} catch (error$2) {
+			import_core.info(`✅ Successfully processed "${file}".`);
+			import_core.warning(`Could not read the publication status of "${file}": ${error$2.message}`);
+			return;
+		}
+		const pending$1 = pendingNodes(statuses);
+		if (pending$1.length === 0) {
+			import_core.info(`✅ Successfully processed "${file}", nothing to publish.`);
+			return;
+		}
+		pendingPublication.push(file);
+		import_core.info(`🟠 Successfully processed "${file}", pending publication (${language}): ${describePending(pending$1)}.`);
+	};
 	/** Pushes one markdown file to the Academy. Throws on failure. */
 	const processFile = async (file) => {
 		const input = await read(file, { encoding: "utf8" });
@@ -65018,7 +65135,11 @@ try {
 			},
 			publish: publish$1,
 			language,
-			overwrite
+			overwrite,
+			fingerprintOf: {
+				...properties,
+				[$body]: String(output)
+			}
 		});
 		if ("page" in frontmatter$1 && frontmatter$1.githubBanner && frontmatter$1.page.$type === "jnt:page") {
 			const bannerParent = dirname(path$7);
@@ -65051,6 +65172,13 @@ try {
 			});
 		}
 		import_core.info(`✅ Successfully processed "${file}".`);
+		await reportPublication(file, [..."page" in frontmatter$1 ? [{
+			role: "page",
+			path: frontmatter$1.page.$path
+		}] : [], {
+			role: "content",
+			path: path$7
+		}], language);
 	};
 	let pending = files;
 	for (let pass = 1; pass <= MAX_PASSES && pending.length > 0; pass++) {
@@ -65060,17 +65188,22 @@ try {
 			await processFile(file);
 		} catch (error$2) {
 			failed.push(file);
+			const hints = invalidLinkHints(error$2);
 			if (pass < MAX_PASSES) {
 				import_core.startGroup(`⚠️ Failed to process "${file}" on pass ${pass}/${MAX_PASSES}, will retry.`);
+				for (const hint of hints) import_core.info(`💡 ${hint}`);
 				import_core.info(inspect(error$2));
+				import_core.endGroup();
 			} else {
 				import_core.startGroup(`❌ Failed to process "${file}" after ${MAX_PASSES} passes, giving up.`);
 				import_core.error(inspect(error$2));
+				import_core.endGroup();
+				for (const hint of hints) import_core.error(`💡 ${hint}`, { file });
 			}
-			import_core.endGroup();
 		}
 		pending = failed;
 	}
+	if (pendingPublication.length > 0) import_core.info(`🟠 ${pendingPublication.length} of ${files.length} file(s) wait for a publication: ${pendingPublication.map((file) => `"${file}"`).join(", ")}.`);
 	if (pending.length > 0) import_core.setFailed(`❌ ${pending.length} of ${files.length} file(s) could not be processed after ${MAX_PASSES} passes: ${pending.map((file) => `"${file}"`).join(", ")}.`);
 	else import_core.info(`🏁 All ${files.length} file(s) processed successfully.`);
 } catch (error$2) {
