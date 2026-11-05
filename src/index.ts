@@ -12,6 +12,7 @@ import { invalidLinkHints } from './hints.ts';
 import { toMarkdown } from './markdown.ts';
 import {
   isUnpublished,
+  jcontentLink,
   processedLine,
   statusTable,
   type FileStatus,
@@ -103,13 +104,15 @@ try {
   const reportPublication = async (
     file: string,
     nodes: Omit<NodeStatus, 'status'>[],
-    language: string
+    language: string,
+    link: string
   ) => {
     let status: FileStatus;
     try {
       status = {
         file,
         language,
+        link,
         nodes: await Promise.all(
           nodes.map(async (node) => ({
             ...node,
@@ -120,7 +123,7 @@ try {
         ),
       };
     } catch (error) {
-      status = { file, language, error: (error as Error).message };
+      status = { file, language, link, error: (error as Error).message };
     }
     publicationStatuses.push(status);
     core.info(processedLine(status));
@@ -208,10 +211,14 @@ try {
 
     await reportPublication(
       file,
-      // Only the content node: the page may hold other content, which the
-      // action does not manage and which is not the document
-      [{ role: 'content', path }],
-      language
+      // The page status is only shown: whether the document is live depends
+      // on its content node alone, as the page can hold other content
+      [
+        ...('page' in frontmatter ? [{ role: 'page', path: frontmatter.page.$path }] : []),
+        { role: 'content', path },
+      ],
+      language,
+      jcontentLink('page' in frontmatter ? frontmatter.page.$path : path, language)
     );
   };
 

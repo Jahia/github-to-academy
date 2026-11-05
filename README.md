@@ -131,21 +131,27 @@ the last push, the action does not write its nodes again. A document that was pu
 then stays published. The `Pushed at` comment at the top of the body is not part of the
 fingerprint, because it changes on every push.
 
-After it pushes a document, the action reads the publication status of its content
-node, and logs the document on one line. The page is left out: it can hold other content
-that the action does not manage.
+After it pushes a document, the action reads the publication status of its content node
+and of its page, and logs the document on a single line. Whether the document is live
+depends on its content node alone: the page can hold other content that the action does
+not manage.
 
-- `✅ Successfully processed "<file>".`: the live site shows what was pushed.
-- `✅ Successfully processed "<file>" - 📝 Unpublished content`: the document needs a
-  publication.
-- `✅ Successfully processed "<file>" - ❔ Publication status unknown`: the action could
-  not read the status. The push itself succeeded.
+- `✅ Successfully processed "<file>" - 🔗 <link>`: the live site shows the content.
+- `✅ Successfully processed "<file>" - 📝 Unpublished content - 🔗 <link>`: the
+  document needs a publication.
+- `✅ Successfully processed "<file>" - ❔ Publication status unknown - 🔗 <link>`: the
+  action could not read the status. The push itself succeeded.
+
+The link opens the page in jContent on the Academy edit server:
+`https://edit.jahia.com/jahia/jcontent/<site>/<language>/pages/<path>`, where `<path>` is
+the JCR path of the page without `/sites/<site>/`, such as `home/documentation/…`.
 
 At the end of the run, the action logs how many documents have unpublished content, and
 a collapsed group, "📋 Publication status of the pushed file(s)", with a table of every
-pushed file: its language, the status of its content, and whether the live site is up
-to date. A status is a value of the `PublicationStatus` GraphQL enum, such as
-`NOT_PUBLISHED` for a new node or `MODIFIED` for a change.
+pushed file: its language, the status of its page and of its content, whether the live
+site is up to date, and the jContent link. A status is a value of the `PublicationStatus`
+GraphQL enum, such as `NOT_PUBLISHED` for a new node or `MODIFIED` for a change. A
+document with no page shows `-` in the page column.
 
 The first push after an upgrade to this version writes every document once more, to
 store its fingerprint.
