@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { describePending, fingerprint, pendingNodes } from './publication.ts';
+import { fingerprint, pendingNodes, processedLine, statusTable } from './publication.ts';
 
 test('the fingerprint does not depend on the order of the properties', () => {
   assert.equal(
@@ -30,5 +30,28 @@ test('every status other than PUBLISHED is pending', () => {
     pendingNodes(nodes).map(({ role }) => role),
     ['content', 'other']
   );
-  assert.equal(describePending(pendingNodes(nodes)), 'content is MODIFIED, other is NOT_PUBLISHED');
+});
+
+const PUBLISHED = { file: 'docs/a.md', language: 'en', nodes: [{ role: 'content', path: '/a', status: 'PUBLISHED' }] };
+const MODIFIED = {
+  file: 'docs/page.md',
+  language: 'en',
+  nodes: [{ role: 'content', path: '/p/c', status: 'MODIFIED' }],
+};
+const UNKNOWN = { file: 'docs/b.md', language: 'fr', error: 'timeout' };
+
+test('the log line of a file is one line, with a note at its end', () => {
+  assert.equal(processedLine(PUBLISHED), '✅ Successfully processed "docs/a.md".');
+  assert.equal(processedLine(MODIFIED), '✅ Successfully processed "docs/page.md" - 📝 Unpublished content');
+  assert.equal(processedLine(UNKNOWN), '✅ Successfully processed "docs/b.md" - ❔ Publication status unknown');
+});
+
+test('the status table aligns its columns', () => {
+  assert.deepEqual(statusTable([PUBLISHED, MODIFIED, UNKNOWN]), [
+    'File         | Language | Content   | Live site',
+    '-------------|----------|-----------|--------------------',
+    'docs/a.md    | en       | PUBLISHED | up to date',
+    'docs/page.md | en       | MODIFIED  | unpublished content',
+    'docs/b.md    | fr       | ?         | unknown: timeout',
+  ]);
 });

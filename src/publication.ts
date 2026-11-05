@@ -20,6 +20,20 @@ export type NodeStatus = {
   status: string;
 };
 
+/** The publication status of the nodes of one pushed file, or why it is unknown. */
+export type FileStatus = {
+  file: string;
+  language: string;
+  nodes?: NodeStatus[];
+  error?: string;
+};
+
+/** Ends the log line of a pushed file whose content the live site does not show yet. */
+export const UNPUBLISHED_NOTE = '📝 Unpublished content';
+
+/** Ends the log line of a pushed file whose publication status could not be read. */
+export const UNKNOWN_NOTE = '❔ Publication status unknown';
+
 /**
  * Every status other than PUBLISHED means the live site does not show what is
  * in the edit workspace: a new node (NOT_PUBLISHED), a change (MODIFIED), an
@@ -28,6 +42,40 @@ export type NodeStatus = {
 export const pendingNodes = (nodes: NodeStatus[]) =>
   nodes.filter(({ status }) => status !== 'PUBLISHED');
 
-/** "page is NOT_PUBLISHED, content is MODIFIED" */
-export const describePending = (nodes: NodeStatus[]) =>
-  nodes.map(({ role, status }) => `${role} is ${status}`).join(', ');
+export const isUnpublished = ({ nodes }: FileStatus) =>
+  nodes !== undefined && pendingNodes(nodes).length > 0;
+
+/** The log line of a pushed file: one line, with a note when there is something to know. */
+export const processedLine = (status: FileStatus) => {
+  const line = `✅ Successfully processed "${status.file}"`;
+  if (status.error !== undefined) return `${line} - ${UNKNOWN_NOTE}`;
+  if (isUnpublished(status)) return `${line} - ${UNPUBLISHED_NOTE}`;
+  return `${line}.`;
+};
+
+/**
+ * The publication status of every pushed file, as the lines of a text table
+ * with aligned columns.
+ */
+export const statusTable = (files: FileStatus[]): string[] => {
+  const header = ['File', 'Language', 'Content', 'Live site'];
+  const rows = files.map((status) => {
+    const content = status.nodes?.map((node) => node.status).join(', ') ?? '?';
+    const live =
+      status.error !== undefined
+        ? `unknown: ${status.error}`
+        : isUnpublished(status)
+          ? 'unpublished content'
+          : 'up to date';
+    return [status.file, status.language, content, live];
+  });
+
+  const widths = header.map((title, column) =>
+    Math.max(title.length, ...rows.map((row) => row[column].length))
+  );
+  // The last column is not padded, so no line ends with spaces
+  const line = (cells: string[]) =>
+    cells.map((cell, column) => (column === cells.length - 1 ? cell : cell.padEnd(widths[column]))).join(' | ');
+
+  return [line(header), widths.map((width) => '-'.repeat(width)).join('-|-'), ...rows.map(line)];
+};

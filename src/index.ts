@@ -10,7 +10,13 @@ import * as z from 'zod';
 import { getPublicationStatus, upsertNode } from './api.ts';
 import { invalidLinkHints } from './hints.ts';
 import { toMarkdown } from './markdown.ts';
-import { describePending, pendingNodes, type NodeStatus } from './publication.ts';
+import {
+  isUnpublished,
+  processedLine,
+  statusTable,
+  type FileStatus,
+  type NodeStatus,
+} from './publication.ts';
 import { isPathNotFound, retry } from './retry.ts';
 import { createStickyFetch } from './sticky-fetch.ts';
 
@@ -86,45 +92,38 @@ try {
 
   core.info(`Found ${files.length} markdown files from glob: "${glob}".`);
 
-  /** Files pushed whose page or content node the live site does not show yet. */
-  const pendingPublication: string[] = [];
+  /** The publication status of every file pushed, in the order of the push. */
+  const publicationStatuses: FileStatus[] = [];
 
   /**
-   * Reads the publication status of the nodes a file pushed, and logs whether
-   * the file waits for a publication. A failure to read a status is logged
-   * and does not fail the file: its content is already pushed.
+   * Reads the publication status of the nodes a file pushed, and logs the
+   * file on one line, with a note when its content is not live yet. A failure
+   * to read a status does not fail the file: its content is already pushed.
    */
   const reportPublication = async (
     file: string,
     nodes: Omit<NodeStatus, 'status'>[],
     language: string
   ) => {
-    let statuses: NodeStatus[];
+    let status: FileStatus;
     try {
-      statuses = await Promise.all(
-        nodes.map(async (node) => ({
-          ...node,
-          status: await retry(() => getPublicationStatus(client, { path: node.path, language }), {
-            shouldRetry: isPathNotFound,
-          }),
-        }))
-      );
+      status = {
+        file,
+        language,
+        nodes: await Promise.all(
+          nodes.map(async (node) => ({
+            ...node,
+            status: await retry(() => getPublicationStatus(client, { path: node.path, language }), {
+              shouldRetry: isPathNotFound,
+            }),
+          }))
+        ),
+      };
     } catch (error) {
-      core.info(`✅ Successfully processed "${file}".`);
-      core.warning(`Could not read the publication status of "${file}": ${(error as Error).message}`);
-      return;
+      status = { file, language, error: (error as Error).message };
     }
-
-    const pending = pendingNodes(statuses);
-    if (pending.length === 0) {
-      core.info(`✅ Successfully processed "${file}", nothing to publish.`);
-      return;
-    }
-
-    pendingPublication.push(file);
-    core.info(
-      `🟠 Successfully processed "${file}", pending publication (${language}): ${describePending(pending)}.`
-    );
+    publicationStatuses.push(status);
+    core.info(processedLine(status));
   };
 
   /** Pushes one markdown file to the Academy. Throws on failure. */
@@ -209,10 +208,9 @@ try {
 
     await reportPublication(
       file,
-      [
-        ...('page' in frontmatter ? [{ role: 'page', path: frontmatter.page.$path }] : []),
-        { role: 'content', path },
-      ],
+      // Only the content node: the page may hold other content, which the
+      // action does not manage and which is not the document
+      [{ role: 'content', path }],
       language
     );
   };
@@ -254,12 +252,15 @@ try {
     pending = failed;
   }
 
-  if (pendingPublication.length > 0) {
+  if (publicationStatuses.length > 0) {
+    const unpublished = publicationStatuses.filter(isUnpublished).length;
     core.info(
-      `🟠 ${pendingPublication.length} of ${files.length} file(s) wait for a publication: ${pendingPublication
-        .map((file) => `"${file}"`)
-        .join(', ')}.`
+      `📝 ${unpublished} of ${publicationStatuses.length} pushed file(s) have unpublished content.`
     );
+    // Collapsed in the log: the details are there for those who investigate
+    core.startGroup(`📋 Publication status of the ${publicationStatuses.length} pushed file(s)`);
+    for (const line of statusTable(publicationStatuses)) core.info(line);
+    core.endGroup();
   }
 
   if (pending.length > 0) {

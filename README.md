@@ -131,16 +131,21 @@ the last push, the action does not write its nodes again. A document that was pu
 then stays published. The `Pushed at` comment at the top of the body is not part of the
 fingerprint, because it changes on every push.
 
-After it pushes a document, the action reads the publication status of its page and
-content nodes, and logs one of these lines:
+After it pushes a document, the action reads the publication status of its content
+node, and logs the document on one line. The page is left out: it can hold other content
+that the action does not manage.
 
-- `✅ Successfully processed "<file>", nothing to publish.`: the live site shows what
-  was pushed.
-- `🟠 Successfully processed "<file>", pending publication (en): content is MODIFIED.`:
-  the document needs a publication. The status is a value of the `PublicationStatus`
-  GraphQL enum, such as `NOT_PUBLISHED` for a new node or `MODIFIED` for a change.
+- `✅ Successfully processed "<file>".`: the live site shows what was pushed.
+- `✅ Successfully processed "<file>" - 📝 Unpublished content`: the document needs a
+  publication.
+- `✅ Successfully processed "<file>" - ❔ Publication status unknown`: the action could
+  not read the status. The push itself succeeded.
 
-At the end of the run, the action lists every file that needs a publication.
+At the end of the run, the action logs how many documents have unpublished content, and
+a collapsed group, "📋 Publication status of the pushed file(s)", with a table of every
+pushed file: its language, the status of its content, and whether the live site is up
+to date. A status is a value of the `PublicationStatus` GraphQL enum, such as
+`NOT_PUBLISHED` for a new node or `MODIFIED` for a change.
 
 The first push after an upgrade to this version writes every document once more, to
 store its fingerprint.
