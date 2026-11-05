@@ -77,6 +77,15 @@ export const processedLine = (status: FileStatus) => {
   return line;
 };
 
+/** Marks a PUBLISHED status in the status table, and only that status. */
+const PUBLISHED_MARK = '✅';
+
+/**
+ * The number of columns a cell takes in a log: the mark is one character
+ * that a log shows two columns wide.
+ */
+const displayWidth = (text: string) => text.length + text.split(PUBLISHED_MARK).length - 1;
+
 /**
  * The publication status of every pushed file, as the lines of a text table
  * with aligned columns.
@@ -85,8 +94,11 @@ export const statusTable = (files: FileStatus[]): string[] => {
   const header = ['File', 'Language', 'Page', 'Content', 'Live site', 'Link'];
   const rows = files.map((status) => {
     // "-" for a document with no page, "?" when the status could not be read
-    const of = (role: string) =>
-      status.nodes?.find((node) => node.role === role)?.status ?? (status.error ? '?' : '-');
+    const of = (role: string) => {
+      const value = status.nodes?.find((node) => node.role === role)?.status;
+      if (value === undefined) return status.error ? '?' : '-';
+      return value === 'PUBLISHED' ? `${PUBLISHED_MARK} ${value}` : value;
+    };
     const live =
       status.error !== undefined
         ? `unknown: ${status.error}`
@@ -97,11 +109,14 @@ export const statusTable = (files: FileStatus[]): string[] => {
   });
 
   const widths = header.map((title, column) =>
-    Math.max(title.length, ...rows.map((row) => row[column].length))
+    Math.max(displayWidth(title), ...rows.map((row) => displayWidth(row[column])))
   );
   // No line ends with spaces, even when its last cell is empty
   const line = (cells: string[]) =>
-    cells.map((cell, column) => cell.padEnd(widths[column])).join(' | ').trimEnd();
+    cells
+      .map((cell, column) => cell + ' '.repeat(widths[column] - displayWidth(cell)))
+      .join(' | ')
+      .trimEnd();
 
   return [line(header), widths.map((width) => '-'.repeat(width)).join('-|-'), ...rows.map(line)];
 };

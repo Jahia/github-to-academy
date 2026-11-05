@@ -84,10 +84,10 @@ test('a modified page alone is not unpublished content', () => {
 
 test('the status table aligns its columns', () => {
   assert.deepEqual(statusTable([PUBLISHED, MODIFIED, UNKNOWN]), [
-    'File         | Language | Page     | Content   | Live site           | Link',
-    '-------------|----------|----------|-----------|---------------------|-' + '-'.repeat(LINK.length),
-    'docs/a.md    | en       | -        | PUBLISHED | up to date          |',
-    `docs/page.md | en       | MODIFIED | MODIFIED  | unpublished content | ${LINK}`,
-    'docs/b.md    | fr       | ?        | ?         | unknown: timeout    |',
+    'File         | Language | Page     | Content      | Live site           | Link',
+    '-------------|----------|----------|--------------|---------------------|-' + '-'.repeat(LINK.length),
+    'docs/a.md    | en       | -        | ✅ PUBLISHED | up to date          |',
+    `docs/page.md | en       | MODIFIED | MODIFIED     | unpublished content | ${LINK}`,
+    'docs/b.md    | fr       | ?        | ?            | unknown: timeout    |',
   ]);
 });
