@@ -193,6 +193,49 @@ so Jahia never publishes it: it is only visible to editors.
 The flag can be overridden for one specific document with the `githubBanner` top-level
 frontmatter property.
 
+### Unchanged documents and pending publication
+
+The action adds the `jmix:unstructured` mixin to each node it pushes, and stores on the
+node a fingerprint of its mixins and values, in a `githubToAcademyFingerprint_<language>`
+property. When a document has not changed since the last push, the action does not write
+its nodes again. A document that was published then stays published. The `Pushed at`
+comment at the top of the body is not part of the fingerprint, because it changes on
+every push.
+
+After it pushes a document, the action reads the publication status of its content node
+and of its page, and logs the document on a single line. Whether the document is live
+depends on its content node alone: the page can hold other content that the action does
+not manage.
+
+- `✅ Pushed "<file>"`: the push succeeded, and the live site shows the content.
+- `✅ Pushed "<file>" - 📝 Needs publishing in the Academy`: the push succeeded, and the
+  content is in the edit mode of the Academy, but not on the live site yet. Someone must
+  publish it in the Academy.
+- `✅ Pushed "<file>" - ❔ Publication status unknown`: the push succeeded, but the action
+  could not read the status.
+
+The link of the status table below opens the page in jContent on the Academy edit server:
+`https://edit.jahia.com/jahia/jcontent/<site>/<language>/pages/<path>`, where `<path>` is
+the JCR path of the page without `/sites/<site>/`, such as `home/documentation/…`.
+
+At the end of the run, the action logs how many documents need publishing, and
+a collapsed group, "📋 Publication status of the pushed file(s)", with a table of every
+pushed file: its language, the status of its page and of its content, whether the live
+site is up to date, and the jContent link. A status is a value of the `PublicationStatus`
+GraphQL enum, such as `NOT_PUBLISHED` for a new node or `MODIFIED` for a change. A
+document with no page shows `-` in the page column.
+
+The first push after an upgrade to this version writes every document once more, to
+store its fingerprint.
+
+### Links to other Academy pages
+
+A link to an Academy page is the JCR path of the page followed by `.html`, such as
+`/sites/academy/home/documentation/jahia-cloud/latest/environment/upgrade-your-environment.html`.
+Jahia refuses a link to a path that it cannot resolve, and the push of the document fails
+with `Invalid link`. The action then logs a hint that names the link, and gives the
+corrected link when only `.html` is missing.
+
 ### Additional markdown transformations
 
 All standard markdown syntax is supported, [with some additional features added to better support the academy.](./src/markdown.ts)

@@ -7,9 +7,18 @@ import { resolve } from 'node:path/posix';
 import { inspect } from 'node:util';
 import { read } from 'to-vfile';
 import * as z from 'zod';
-import { deleteIfTypeDiffers, ensureFirstChild, upsertNode } from './api.ts';
+import { deleteIfTypeDiffers, ensureFirstChild, getPublicationStatus, upsertNode } from './api.ts';
 import { githubBannerHtml } from './banner.ts';
+import { invalidLinkHints } from './hints.ts';
 import { toMarkdown } from './markdown.ts';
+import {
+  isUnpublished,
+  jcontentLink,
+  processedLine,
+  statusTable,
+  type FileStatus,
+  type NodeStatus,
+} from './publication.ts';
 
 const GITHUB_BANNER_NODE_NAME = 'github-banner';
 
@@ -96,6 +105,39 @@ try {
   const failures: string[] = [];
   let pushed = 0;
   let skipped = 0;
+  /** The publication status of every file pushed, in the order of the push. */
+  const publicationStatuses: FileStatus[] = [];
+
+  /**
+   * Reads the publication status of the nodes a file pushed, and logs the
+   * file on one line, with a note when its content is not live yet. A failure
+   * to read a status does not fail the file: its content is already pushed.
+   */
+  const reportPublication = async (
+    file: string,
+    nodes: Omit<NodeStatus, 'status'>[],
+    language: string,
+    link: string
+  ) => {
+    let status: FileStatus;
+    try {
+      status = {
+        file,
+        language,
+        link,
+        nodes: await Promise.all(
+          nodes.map(async (node) => ({
+            ...node,
+            status: await getPublicationStatus(client, { path: node.path, language }),
+          }))
+        ),
+      };
+    } catch (error) {
+      status = { file, language, link, error: (error as Error).message };
+    }
+    publicationStatuses.push(status);
+    core.info(processedLine(status));
+  };
 
   for (const file of files) {
     try {
@@ -174,6 +216,9 @@ try {
         properties: { ...properties, [$body]: html },
         publish,
         language,
+        // The body starts with a stamp that changes on every push: leave it
+        // out, so an unchanged document is not rewritten
+        fingerprintOf: { ...properties, [$body]: String(output) },
       });
 
       // Optionally maintain the "github-banner" node as the first content of the
@@ -205,14 +250,38 @@ try {
         await ensureFirstChild(client, { parent: area, name: GITHUB_BANNER_NODE_NAME });
       }
 
-      core.info(`✅ Successfully processed "${file}".`);
+      await reportPublication(
+        file,
+        // The page status is only shown: whether the document is live depends
+        // on its content node alone, as the page can hold other content
+        [
+          ...('page' in frontmatter ? [{ role: 'page', path: frontmatter.page.$path }] : []),
+          { role: 'content', path },
+        ],
+        language,
+        jcontentLink('page' in frontmatter ? frontmatter.page.$path : path, language)
+      );
       pushed++;
     } catch (error) {
       core.startGroup(`❌ Failed to process "${file}".`);
       core.error(inspect(error));
       core.endGroup();
+      // Outside the group, and as annotations on the file, so the hint is the
+      // first thing read in the log and in the run summary
+      for (const hint of invalidLinkHints(error)) core.error(`💡 ${hint}`, { file });
       failures.push(file);
     }
+  }
+
+  if (publicationStatuses.length > 0) {
+    const unpublished = publicationStatuses.filter(isUnpublished).length;
+    core.info(
+      `📝 ${unpublished} of ${publicationStatuses.length} pushed file(s) need publishing in the Academy.`
+    );
+    // Collapsed in the log: the details are there for those who investigate
+    core.startGroup(`📋 Publication status of the ${publicationStatuses.length} pushed file(s)`);
+    for (const line of statusTable(publicationStatuses)) core.info(line);
+    core.endGroup();
   }
 
   core.info(

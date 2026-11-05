@@ -2,6 +2,15 @@ import type { Client } from '@urql/core';
 import { graphql } from 'gql.tada';
 import assert from 'node:assert/strict';
 import { basename, dirname } from 'node:path/posix';
+import { fingerprint } from './publication.ts';
+
+/**
+ * Property that holds the fingerprint of the node type, mixins and values
+ * last pushed in a language. A push whose fingerprint matches it writes
+ * nothing. The jmix:unstructured mixin, which the action adds to every node
+ * it pushes, allows this property on any node type.
+ */
+export const fingerprintProperty = (language: string) => `githubToAcademyFingerprint_${language}`;
 
 /** Inserts or updates a node. */
 export const upsertNode = async (
@@ -9,10 +18,11 @@ export const upsertNode = async (
   {
     path,
     type,
-    mixins = [],
+    mixins: requestedMixins = [],
     properties: rawProperties,
     language,
     publish,
+    fingerprintOf = rawProperties,
   }: {
     path: string;
     type: string;
@@ -20,24 +30,39 @@ export const upsertNode = async (
     properties: Record<string, unknown>;
     language: string;
     publish: boolean;
+    /**
+     * The values that identify what is pushed, when they differ from
+     * `properties`: a body without the parts that change on every push.
+     */
+    fingerprintOf?: Record<string, unknown>;
   }
 ) => {
-  const properties = prepareProperties(rawProperties, language);
+  const mixins = [...new Set([...requestedMixins, 'jmix:unstructured'])];
+  // jcr:mixinTypes is a protected JCR name, so no frontmatter property takes it
+  const pushed = fingerprint({ ...fingerprintOf, 'jcr:mixinTypes': [...requestedMixins].sort() });
+  const properties = prepareProperties(
+    { ...rawProperties, [fingerprintProperty(language)]: pushed },
+    language
+  );
 
-  // Fetch the node to see if it exists and if it's of a compatible node type
+  // Fetch the node to see if it exists, if it's of a compatible node type,
+  // and the fingerprint of what was last pushed to it
   const { data, error } = await client.query(
     graphql(`
-      query ($path: String!) {
+      query ($path: String!, $fingerprint: String!, $language: String!) {
         jcr {
           nodeByPath(path: $path) {
             primaryNodeType {
               name
             }
+            fingerprint: property(name: $fingerprint, language: $language) {
+              value
+            }
           }
         }
       }
     `),
-    { path }
+    { path, fingerprint: fingerprintProperty(language), language }
   );
 
   if (error?.graphQLErrors.some(({ message }) => message.includes('PathNotFoundException'))) {
@@ -102,28 +127,35 @@ export const upsertNode = async (
       `Node at path "${path}" has an unexpected node type.`
     );
 
+    // A write sets jcr:lastModified, and the node then waits for a
+    // publication, even when every value is the one it already holds. Skip
+    // the write when the same values were pushed last time, so a re-push of
+    // a published document leaves it published.
+    const changed = data.jcr.nodeByPath.fingerprint?.value !== pushed;
+
+    if (!changed && !publish) return;
+
     // At this point, the node exists, update it
     const { error } = await client.mutation(
       graphql(`
         mutation (
           $path: String!
           $mixins: [String!]!
-          $hasMixins: Boolean!
+          $write: Boolean!
           $properties: [InputJCRProperty!]!
           $publish: Boolean!
           $language: String!
         ) {
           # Root mutation fields run in order, so the mixins are in place before
           # the properties they define are set. Adding a mixin the node already
-          # has is a no-op, which keeps a re-push idempotent. Skipped entirely
-          # when there are none, so content that sets no mixins neither depends
-          # on this field nor pays for an extra write.
-          mixins: jcr @include(if: $hasMixins) {
+          # has is a no-op, which keeps a re-push idempotent. The list always
+          # holds jmix:unstructured, which allows the fingerprint property.
+          mixins: jcr @include(if: $write) {
             mutateNode(pathOrId: $path) {
               addMixins(mixins: $mixins)
             }
           }
-          jcr {
+          jcr @include(if: $write) {
             mutateNode(pathOrId: $path) {
               setPropertiesBatch(properties: $properties) {
                 __typename
@@ -137,11 +169,43 @@ export const upsertNode = async (
           }
         }
       `),
-      { path, mixins, hasMixins: mixins.length > 0, properties, publish, language }
+      { path, mixins, write: changed, properties, publish, language }
     );
 
     if (error) throw error;
   }
+};
+
+/**
+ * The publication status of the node at `path` in `language`, a value of the
+ * `PublicationStatus` GraphQL enum. Only the node itself counts, not its
+ * children: the page of a document holds nodes the action keeps unpublished
+ * on purpose, such as the GitHub banner.
+ */
+export const getPublicationStatus = async (
+  client: Client,
+  { path, language }: { path: string; language: string }
+): Promise<string> => {
+  const { data, error } = await client.query(
+    graphql(`
+      query ($path: String!, $language: String!) {
+        jcr {
+          nodeByPath(path: $path) {
+            aggregatedPublicationInfo(language: $language, subNodes: false, references: false) {
+              publicationStatus
+            }
+          }
+        }
+      }
+    `),
+    { path, language }
+  );
+
+  if (error) throw error;
+
+  const status = data?.jcr.nodeByPath?.aggregatedPublicationInfo.publicationStatus;
+  assert(status, `Node at path "${path}" has no publication status.`);
+  return status;
 };
 
 /** Deletes the node at `path` when it exists with a primary type other than `type`. */
