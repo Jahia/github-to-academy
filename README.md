@@ -59,6 +59,10 @@ content:
 ## Write markdown here!
 
 This file will be converted to HTML and pushed to the `text` property of the big text node type.
+
+A file whose frontmatter has neither a `content` nor a `page` block is skipped, and so is a file with no
+frontmatter: a `docs/` folder can hold documents that are not for the Academy, such as Architecture Decision
+Records, whose frontmatter carries their own `status` and `date`.
 ```
 
 In the specific case of the academy, we usually want to map one markdown file to one academy page, which requires creating/updating many nodes at once. For now, the action supports creating one parent node (usually the page) for the content node (that usually lives in an area).
